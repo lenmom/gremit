@@ -1,7 +1,7 @@
-﻿using System;
-using System.Reflection.Emit;
+﻿using NUnit.Framework;
 
-using NUnit.Framework;
+using System;
+using System.Reflection.Emit;
 
 namespace GrEmit.Tests
 {
@@ -11,8 +11,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestLdarg1()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldarg(0);
             il.Ldarg(1);
             Assert.Throws<ArgumentOutOfRangeException>(() => il.Ldarg(-2));
@@ -24,8 +24,8 @@ namespace GrEmit.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 {
-                    var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-                    using (var il = new GroboIL(method))
+                    DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+                    using (GroboIL il = new GroboIL(method))
                     {
                         il.Ldarg(0);
                         il.Ldarg(1);
@@ -37,8 +37,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestLdarg2()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldarg(0);
             il.Ldarg(1);
             Assert.Throws<ArgumentOutOfRangeException>(() => il.Ldarg(2));
@@ -47,8 +47,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestStarg1()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldc_I4(0);
             il.Starg(0);
             il.Ldc_I4(0);
@@ -60,8 +60,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestStarg2()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldc_I4(0);
             il.Starg(0);
             il.Ldc_I4(0);
@@ -73,8 +73,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestLdarga1()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldarga(0);
             il.Ldarga(1);
             Assert.Throws<ArgumentOutOfRangeException>(() => il.Ldarga(-2));
@@ -83,8 +83,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestLdarga2()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int), typeof(int)}, typeof(TestArgumentOutOfRange));
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int), typeof(int) }, typeof(TestArgumentOutOfRange));
+            GroboIL il = new GroboIL(method);
             il.Ldarga(0);
             il.Ldarga(1);
             Assert.Throws<ArgumentOutOfRangeException>(() => il.Ldarga(2));

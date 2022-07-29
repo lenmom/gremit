@@ -2,6 +2,7 @@
 using System.Reflection.Emit;
 
 using NUnit.Framework;
+
 #if NET45
 using System.Reflection;
 using System.Threading;
@@ -16,19 +17,19 @@ namespace GrEmit.Tests
         [Test]
         public void Test1()
         {
-            var overflow = typeof(OverflowException);
-            var exCtorInfo = overflow.GetConstructor(new[] {typeof(string)});
-            var exToStrMI = overflow.GetMethod("ToString");
-            var writeLineMI = typeof(Console).GetMethod("WriteLine",
+            Type overflow = typeof(OverflowException);
+            ConstructorInfo exCtorInfo = overflow.GetConstructor(new[] { typeof(string) });
+            MethodInfo exToStrMI = overflow.GetMethod("ToString");
+            MethodInfo writeLineMI = typeof(Console).GetMethod("WriteLine",
                                                         new[]
                                                             {
                                                                 typeof(string),
                                                                 typeof(object)
                                                             });
 
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(int), typeof(int)}, typeof(TestTryCatch));
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(int), typeof(int) }, typeof(TestTryCatch));
 
-            using (var il = new GroboIL(method))
+            using (GroboIL il = new GroboIL(method))
             {
                 GroboIL.Local tmp1 = il.DeclareLocal(typeof(int));
                 GroboIL.Local tmp2 = il.DeclareLocal(overflow);
@@ -148,19 +149,19 @@ namespace GrEmit.Tests
 
             // Create a dynamic module.
             ModuleBuilder myModuleBuilder = myAssemblyBuilder.DefineDynamicModule("AdderExceptionMod", true);
-            var symbolDocumentWriter = myModuleBuilder.GetSymWriter().DefineDocument("AdderException.cil", Guid.Empty, Guid.Empty, Guid.Empty);
+            System.Diagnostics.SymbolStore.ISymbolDocumentWriter symbolDocumentWriter = myModuleBuilder.GetSymWriter().DefineDocument("AdderException.cil", Guid.Empty, Guid.Empty, Guid.Empty);
 
             TypeBuilder myTypeBuilder = myModuleBuilder.DefineType("Adder");
-            Type[] adderParams = {typeof(int), typeof(int)};
+            Type[] adderParams = { typeof(int), typeof(int) };
 
-            ConstructorInfo myConstructorInfo = typeof(OverflowException).GetConstructor(new[] {typeof(string)});
+            ConstructorInfo myConstructorInfo = typeof(OverflowException).GetConstructor(new[] { typeof(string) });
             MethodInfo myExToStrMI = typeof(OverflowException).GetMethod("ToString");
-            MethodInfo myWriteLineMI = typeof(Console).GetMethod("WriteLine", new[] {typeof(string), typeof(object)});
+            MethodInfo myWriteLineMI = typeof(Console).GetMethod("WriteLine", new[] { typeof(string), typeof(object) });
 
             // Define method to add two numbers.
             MethodBuilder myMethodBuilder = myTypeBuilder.DefineMethod("DoAdd", MethodAttributes.Public |
                                                                                 MethodAttributes.Static, typeof(int), adderParams);
-            using (var il = new GroboIL(myMethodBuilder, symbolDocumentWriter))
+            using (GroboIL il = new GroboIL(myMethodBuilder, symbolDocumentWriter))
             {
                 // Declare local variable.
                 GroboIL.Local myLocalBuilder1 = il.DeclareLocal(typeof(int));

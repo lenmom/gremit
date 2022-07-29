@@ -1,9 +1,9 @@
+using GrEmit.Utils;
+
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-
-using GrEmit.Utils;
 
 namespace GrEmit.InstructionParameters
 {

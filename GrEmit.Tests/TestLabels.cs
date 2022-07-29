@@ -1,7 +1,7 @@
-﻿using System;
-using System.Reflection.Emit;
+﻿using NUnit.Framework;
 
-using NUnit.Framework;
+using System;
+using System.Reflection.Emit;
 
 namespace GrEmit.Tests
 {
@@ -11,34 +11,34 @@ namespace GrEmit.Tests
         [Test]
         public void TestLabelHasNotBeenMarked()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
-            var il = new GroboIL(method);
-            var label = il.DefineLabel("L");
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
+            GroboIL il = new GroboIL(method);
+            GroboIL.Label label = il.DefineLabel("L");
             il.Ldc_I4(0);
             il.Brfalse(label);
             il.Ret();
-            var e = Assert.Throws<InvalidOperationException>(il.Seal);
+            InvalidOperationException e = Assert.Throws<InvalidOperationException>(il.Seal);
             Assert.AreEqual("The label 'L_0' has not been marked", e.Message);
         }
 
         [Test]
         public void TestLabelHasNotBeenMarked_Switch()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
-            var il = new GroboIL(method);
-            var label = il.DefineLabel("L");
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
+            GroboIL il = new GroboIL(method);
+            GroboIL.Label label = il.DefineLabel("L");
             il.Ldc_I4(0);
             il.Switch(label);
             il.Ret();
-            var e = Assert.Throws<InvalidOperationException>(il.Seal);
+            InvalidOperationException e = Assert.Throws<InvalidOperationException>(il.Seal);
             Assert.AreEqual("The label 'L_0' has not been marked", e.Message);
         }
 
         [Test]
         public void TestLabelHasNotBeenUsed()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.DefineLabel("L");
                 il.Ret();
@@ -48,9 +48,9 @@ namespace GrEmit.Tests
         [Test]
         public void TestLabelHasBeenMarkedTwice()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
-            var il = new GroboIL(method);
-            var label = il.DefineLabel("L");
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(string), true);
+            GroboIL il = new GroboIL(method);
+            GroboIL.Label label = il.DefineLabel("L");
             il.Ldc_I4(0);
             il.Brfalse(label);
             il.Ldc_I4(1);
@@ -58,7 +58,7 @@ namespace GrEmit.Tests
             il.MarkLabel(label);
             il.Ldc_I4(2);
             il.Pop();
-            var e = Assert.Throws<InvalidOperationException>(() => il.MarkLabel(label));
+            InvalidOperationException e = Assert.Throws<InvalidOperationException>(() => il.MarkLabel(label));
             Assert.AreEqual("The label 'L_0' has already been marked", e.Message);
         }
     }

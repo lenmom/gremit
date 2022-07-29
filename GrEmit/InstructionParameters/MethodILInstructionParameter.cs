@@ -1,6 +1,6 @@
-using System.Reflection;
-
 using GrEmit.Utils;
+
+using System.Reflection;
 
 namespace GrEmit.InstructionParameters
 {

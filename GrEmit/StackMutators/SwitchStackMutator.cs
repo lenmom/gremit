@@ -6,11 +6,13 @@ namespace GrEmit.StackMutators
     {
         public override void Mutate(GroboIL il, ILInstructionParameter parameter, ref EvaluationStack stack)
         {
-            var labels = ((LabelsILInstructionParameter)parameter).Labels;
+            GroboIL.Label[] labels = ((LabelsILInstructionParameter)parameter).Labels;
             CheckNotEmpty(il, stack, () => "A value must be put onto the evaluation stack in order to perform the 'switch' instruction");
             CheckNotStruct(il, stack.Pop());
-            foreach (var label in labels)
+            foreach (GroboIL.Label label in labels)
+            {
                 SaveOrCheck(il, stack, label);
+            }
         }
     }
 }

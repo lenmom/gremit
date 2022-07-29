@@ -1,11 +1,11 @@
-﻿using System;
+﻿using GrEmit.Utils;
+
+using NUnit.Framework;
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-
-using GrEmit.Utils;
-
-using NUnit.Framework;
 
 namespace GrEmit.Tests
 {
@@ -16,8 +16,8 @@ namespace GrEmit.Tests
         public void TestCall()
         {
             CForCallTest.callStatic = 0;
-            var c = new CForCallTest();
-            HackHelpers.CallMethod(c, test => test.CallInstance(-1), null, new object[] {2});
+            CForCallTest c = new CForCallTest();
+            HackHelpers.CallMethod(c, test => test.CallInstance(-1), null, new object[] { 2 });
             Assert.AreEqual(2, c.callInstance);
             Assert.AreEqual(0, CForCallTest.callStatic);
         }
@@ -26,8 +26,8 @@ namespace GrEmit.Tests
         public void TestCallWithRet()
         {
             CForCallTest.callStatic = 0;
-            var c = new CForCallTest();
-            Assert.AreEqual(3, HackHelpers.CallMethod(c, test => test.CallInstanceRet(-1), null, new object[] {3}));
+            CForCallTest c = new CForCallTest();
+            Assert.AreEqual(3, HackHelpers.CallMethod(c, test => test.CallInstanceRet(-1), null, new object[] { 3 }));
             Assert.AreEqual(3, c.callInstance);
             Assert.AreEqual(0, CForCallTest.callStatic);
         }
@@ -43,22 +43,22 @@ namespace GrEmit.Tests
         public void TestCallStatic()
         {
             CForCallTest.callStatic = 0;
-            var c = new CForCallTest();
-            HackHelpers.CallStaticMethod(() => CForCallTest.CallStatic(-1), null, new object[] {2});
+            CForCallTest c = new CForCallTest();
+            HackHelpers.CallStaticMethod(() => CForCallTest.CallStatic(-1), null, new object[] { 2 });
             Assert.AreEqual(0, c.callInstance);
             Assert.AreEqual(2, CForCallTest.callStatic);
 
             Assert.AreEqual(20,
                             (int)
-                            HackHelpers.CallStaticMethod(() => CForCallTest.CallStaticGeneric(""), new[] {typeof(int)},
-                                                         new object[] {20}));
+                            HackHelpers.CallStaticMethod(() => CForCallTest.CallStaticGeneric(""), new[] { typeof(int) },
+                                                         new object[] { 20 }));
             Assert.AreEqual(22,
                             (int)
-                            HackHelpers.CallStaticMethod(() => CForCallTest.CallStaticGeneric2<string>(-1), new[] {typeof(int)},
-                                                         new object[] {21}));
+                            HackHelpers.CallStaticMethod(() => CForCallTest.CallStaticGeneric2<string>(-1), new[] { typeof(int) },
+                                                         new object[] { 21 }));
             Assert.AreEqual(null,
-                            HackHelpers.CallStaticMethod(() => CForCallTest.EmitInjectServices<int>(null), new[] {typeof(HackHelpersTest)},
-                                                         new object[] {null}));
+                            HackHelpers.CallStaticMethod(() => CForCallTest.EmitInjectServices<int>(null), new[] { typeof(HackHelpersTest) },
+                                                         new object[] { null }));
         }
 
         [Test]
@@ -85,8 +85,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestGetPropGeneric()
         {
-            Assert.AreEqual(GetProp(typeof(CGeneric<long>), "Prop"), HackHelpers.GetProp<CGeneric<int>>(x => x.Prop, new[] {typeof(long)}));
-            Assert.AreEqual(GetProp(typeof(CGeneric<long>), "GProp"), HackHelpers.GetProp<CGeneric<int>>(x => x.GProp, new[] {typeof(long)}));
+            Assert.AreEqual(GetProp(typeof(CGeneric<long>), "Prop"), HackHelpers.GetProp<CGeneric<int>>(x => x.Prop, new[] { typeof(long) }));
+            Assert.AreEqual(GetProp(typeof(CGeneric<long>), "GProp"), HackHelpers.GetProp<CGeneric<int>>(x => x.GProp, new[] { typeof(long) }));
         }
 
         [Test]
@@ -100,8 +100,8 @@ namespace GrEmit.Tests
         {
             MethodInfo constructedMethod =
                 HackHelpers.ConstructGenericMethodDefinitionForGenericClass<CGeneric<int>>(x => x.Method<long>(),
-                                                                                           new[] {typeof(string)},
-                                                                                           new[] {typeof(object)});
+                                                                                           new[] { typeof(string) },
+                                                                                           new[] { typeof(object) });
             Assert.AreEqual(HackHelpers.GetMethodDefinition<CGeneric<string>>(generic => generic.Method<object>()),
                             constructedMethod);
 
@@ -118,8 +118,8 @@ namespace GrEmit.Tests
         {
             MethodInfo constructedMethod =
                 HackHelpers.ConstructGenericMethodDefinitionForGenericClass<IGenericChild<int>>(x => x.Meth<long>(),
-                                                                                                new[] {typeof(string)},
-                                                                                                new[] {typeof(object)});
+                                                                                                new[] { typeof(string) },
+                                                                                                new[] { typeof(object) });
 
             Assert.AreEqual(HackHelpers.GetMethodDefinition<IGeneric<string>>(generic => generic.Meth<object>()),
                             constructedMethod);
@@ -128,15 +128,15 @@ namespace GrEmit.Tests
         [Test]
         public void TestConstructMethodDefinition()
         {
-            Assert.AreEqual(GetMethod(typeof(ClassWithMethods), "Method", new[] {typeof(long)}),
+            Assert.AreEqual(GetMethod(typeof(ClassWithMethods), "Method", new[] { typeof(long) }),
                             HackHelpers.ConstructMethodDefinition<ClassWithMethods>(o => o.Method<int>(),
-                                                                                    new[] {typeof(long)}));
+                                                                                    new[] { typeof(long) }));
             Assert.AreEqual(GetMethod(typeof(ClassWithMethods), "NonGenericMeth", null),
                             HackHelpers.ConstructMethodDefinition<ClassWithMethods>(o => o.NonGenericMeth(), null));
             Assert.AreEqual(
-                GetMethod(typeof(ClassWithMethods), "Method2", new[] {typeof(long), typeof(object)}),
+                GetMethod(typeof(ClassWithMethods), "Method2", new[] { typeof(long), typeof(object) }),
                 HackHelpers.ConstructMethodDefinition<ClassWithMethods>(o => o.Method2<int, string>(default(string)),
-                                                                        new[] {typeof(long), typeof(object)}));
+                                                                        new[] { typeof(long), typeof(object) }));
 
             Assert.AreEqual(GetMethod(typeof(CForCallTest), "CallStatic", null),
                             HackHelpers.ConstructStaticMethodDefinition(() => CForCallTest.CallStatic(11), null));
@@ -147,8 +147,8 @@ namespace GrEmit.Tests
         {
             MethodInfo constructedMethod =
                 HackHelpers.ConstructGenericMethodDefinitionForGenericClass<CGeneric<int>>(x => x.Method<long>(1),
-                                                                                           new[] {typeof(string)},
-                                                                                           new[] {typeof(object)});
+                                                                                           new[] { typeof(string) },
+                                                                                           new[] { typeof(object) });
             Assert.AreEqual(HackHelpers.GetMethodDefinition<CGeneric<string>>(generic => generic.Method<object>(1)),
                             constructedMethod);
         }
@@ -158,8 +158,8 @@ namespace GrEmit.Tests
         {
             MethodInfo constructedMethod =
                 HackHelpers.ConstructGenericMethodDefinitionForGenericClass<CGeneric<int>>(x => x.Method(1L, "b", 2),
-                                                                                           new[] {typeof(object)},
-                                                                                           new[] {typeof(A), typeof(B)});
+                                                                                           new[] { typeof(object) },
+                                                                                           new[] { typeof(A), typeof(B) });
             Assert.AreEqual(
                 HackHelpers.GetMethodDefinition<CGeneric<object>>(
                     generic => generic.Method(default(A), default(B), default(object))),
@@ -194,7 +194,7 @@ namespace GrEmit.Tests
         {
             Assert.AreEqual(typeof(HackHelpersTest).GetConstructor(Type.EmptyTypes),
                             HackHelpers.GetObjectConstruction(() => new HackHelpersTest()));
-            Assert.AreEqual(typeof(string).GetConstructor(new[] {typeof(char), typeof(int)}),
+            Assert.AreEqual(typeof(string).GetConstructor(new[] { typeof(char), typeof(int) }),
                             HackHelpers.GetObjectConstruction(() => new string('x', 1)));
             try
             {
@@ -205,10 +205,10 @@ namespace GrEmit.Tests
             {
                 Assert.AreEqual("Struct creation without arguments", e.Message);
             }
-            Assert.AreEqual(typeof(CStruct).GetConstructor(new[] {typeof(int)}),
+            Assert.AreEqual(typeof(CStruct).GetConstructor(new[] { typeof(int) }),
                             HackHelpers.GetObjectConstruction(() => new CStruct(1)));
 
-            Assert.AreEqual(typeof(CGeneric<long>).GetConstructor(new[] {typeof(long)}),
+            Assert.AreEqual(typeof(CGeneric<long>).GetConstructor(new[] { typeof(long) }),
                             HackHelpers.GetObjectConstruction(() => new CGeneric<string>("zzz"), typeof(long)));
         }
 
@@ -235,9 +235,14 @@ namespace GrEmit.Tests
                 if (info.Name == name)
                 {
                     if (genericArguments == null || genericArguments.Length == 0 && !info.IsGenericMethod)
+                    {
                         return info;
+                    }
+
                     if (info.IsGenericMethod)
+                    {
                         return info.MakeGenericMethod(genericArguments);
+                    }
                 }
             }
             throw new MissingMethodException(type.Name, name);
@@ -249,7 +254,9 @@ namespace GrEmit.Tests
             foreach (FieldInfo info in fields)
             {
                 if (info.Name == name)
+                {
                     return info;
+                }
             }
             throw new MissingMethodException(type.Name, name);
         }
@@ -260,7 +267,9 @@ namespace GrEmit.Tests
             foreach (PropertyInfo info in props)
             {
                 if (info.Name == name)
+                {
                     return info;
+                }
             }
             throw new MissingMethodException(type.Name, name);
         } // ReSharper disable ClassNeverInstantiated.Local

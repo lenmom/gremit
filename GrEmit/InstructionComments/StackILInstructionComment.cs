@@ -1,6 +1,6 @@
-using System.Linq;
-
 using GrEmit.Utils;
+
+using System.Linq;
 
 namespace GrEmit.InstructionComments
 {

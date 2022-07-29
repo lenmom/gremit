@@ -13,14 +13,20 @@ namespace GrEmit.StackMutators
         public override void Mutate(GroboIL il, ILInstructionParameter parameter, ref EvaluationStack stack)
         {
             CheckNotEmpty(il, stack, () => $"Expected two arguments for the operation '{opCode}'");
-            var right = stack.Pop();
+            ESType right = stack.Pop();
             CheckNotEmpty(il, stack, () => $"Expected two arguments for the operation '{opCode}'");
-            var left = stack.Pop();
+            ESType left = stack.Pop();
             if (!IsAllowed(ToCLIType(left), ToCLIType(right)))
+            {
                 ThrowError(il, $"Cannot perform the instruction '{opCode}' on types '{left}' and '{right}'");
-            var result = Canonize(GetResultType(Canonize(left), Canonize(right)));
+            }
+
+            Type result = Canonize(GetResultType(Canonize(left), Canonize(right)));
             if (result != typeof(void))
+            {
                 stack.Push(result);
+            }
+
             PostAction(il, parameter, ref stack);
         }
 
@@ -29,8 +35,10 @@ namespace GrEmit.StackMutators
 
         protected void Allow(CLIType left, params CLIType[] right)
         {
-            foreach (var r in right)
+            foreach (CLIType r in right)
+            {
                 allowedTypes[(int)left, (int)r] = true;
+            }
         }
 
         private bool IsAllowed(CLIType left, CLIType right)

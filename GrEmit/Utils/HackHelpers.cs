@@ -9,8 +9,12 @@ namespace GrEmit.Utils
         public static Type GetValueTypeForNullableOrNull(Type mayBeNullable)
         {
             if (!mayBeNullable.IsGenericType || mayBeNullable.IsGenericTypeDefinition ||
-                mayBeNullable.GetGenericTypeDefinition() != typeof(Nullable<>)) return null;
-            var valueType = mayBeNullable.GetGenericArguments()[0];
+                mayBeNullable.GetGenericTypeDefinition() != typeof(Nullable<>))
+            {
+                return null;
+            }
+
+            Type valueType = mayBeNullable.GetGenericArguments()[0];
             return valueType;
         }
 
@@ -29,41 +33,50 @@ namespace GrEmit.Utils
         public static ConstructorInfo GetObjectConstruction<T>(Expression<Func<T>> constructorCall,
                                                                params Type[] classGenericArgs)
         {
-            var expression = constructorCall.Body;
-            var sourceCi = ObjectConstruction(EliminateConvert(expression));
+            Expression expression = constructorCall.Body;
+            ConstructorInfo sourceCi = ObjectConstruction(EliminateConvert(expression));
             if (typeof(T).IsValueType && sourceCi == null)
+            {
                 throw new NotSupportedException("Struct creation without arguments");
-            var type = sourceCi.ReflectedType;
-            var resultReflectedType = type.IsGenericType && classGenericArgs != null && classGenericArgs.Length > 0
+            }
+
+            Type type = sourceCi.ReflectedType;
+            Type resultReflectedType = type.IsGenericType && classGenericArgs != null && classGenericArgs.Length > 0
                                           ? type.GetGenericTypeDefinition().MakeGenericType(classGenericArgs)
                                           : type;
-            var methodBase = MethodBase.GetMethodFromHandle(
+            MethodBase methodBase = MethodBase.GetMethodFromHandle(
                 sourceCi.MethodHandle, resultReflectedType.TypeHandle);
-            var constructedCtorForResultType = (ConstructorInfo)methodBase;
+            ConstructorInfo constructedCtorForResultType = (ConstructorInfo)methodBase;
             return constructedCtorForResultType;
         }
 
         public static MethodInfo ConstructMethodDefinition<T>(Expression<Action<T>> callExpr, Type[] methodGenericArgs)
         {
-            var methodCallExpression = (MethodCallExpression)callExpr.Body;
-            var methodInfo = methodCallExpression.Method;
+            MethodCallExpression methodCallExpression = (MethodCallExpression)callExpr.Body;
+            MethodInfo methodInfo = methodCallExpression.Method;
             if (!methodInfo.IsGenericMethod)
+            {
                 return methodInfo;
+            }
+
             return methodInfo.GetGenericMethodDefinition().MakeGenericMethod(methodGenericArgs);
         }
 
         public static MethodInfo ConstructStaticMethodDefinition(Expression<Action> callExpr, Type[] methodGenericArgs)
         {
-            var methodCallExpression = (MethodCallExpression)callExpr.Body;
-            var methodInfo = methodCallExpression.Method;
+            MethodCallExpression methodCallExpression = (MethodCallExpression)callExpr.Body;
+            MethodInfo methodInfo = methodCallExpression.Method;
             if (!methodInfo.IsGenericMethod)
+            {
                 return methodInfo;
+            }
+
             return methodInfo.GetGenericMethodDefinition().MakeGenericMethod(methodGenericArgs);
         }
 
         public static MethodInfo GetMethodDefinition<T>(Expression<Action<T>> callExpr)
         {
-            var methodCallExpression = (MethodCallExpression)callExpr.Body;
+            MethodCallExpression methodCallExpression = (MethodCallExpression)callExpr.Body;
             return methodCallExpression.Method;
         }
 
@@ -75,66 +88,83 @@ namespace GrEmit.Utils
         public static object CallMethod<T>(T target, Expression<Action<T>> callExpr, Type[] methodGenericArgs,
                                            object[] methodArgs)
         {
-            var methodInfo = ConstructMethodDefinition(callExpr, methodGenericArgs);
+            MethodInfo methodInfo = ConstructMethodDefinition(callExpr, methodGenericArgs);
             return methodInfo.Invoke(target, methodArgs);
         }
 
         public static object CallStaticMethod(Expression<Action> callExpr, Type[] methodGenericArgs,
                                               object[] methodArgs)
         {
-            var methodInfo = ConstructStaticMethodDefinition(callExpr, methodGenericArgs);
+            MethodInfo methodInfo = ConstructStaticMethodDefinition(callExpr, methodGenericArgs);
             return methodInfo.Invoke(null, methodArgs);
         }
 
         public static PropertyInfo GetStaticProperty(Expression<Func<object>> callExpr)
         {
-            var expression = EliminateConvert(callExpr.Body);
-            var memberInfo = ((MemberExpression)expression).Member;
-            var propertyInfo = memberInfo as PropertyInfo;
+            Expression expression = EliminateConvert(callExpr.Body);
+            MemberInfo memberInfo = ((MemberExpression)expression).Member;
+            PropertyInfo propertyInfo = memberInfo as PropertyInfo;
             if (propertyInfo == null)
+            {
                 throw new ArgumentException($"Bad expression. {memberInfo} is not a PropertyInfo");
+            }
+
             return propertyInfo;
         }
 
         public static FieldInfo GetStaticField(Expression<Func<object>> callExpr)
         {
-            var expression = EliminateConvert(callExpr.Body);
-            var memberInfo = ((MemberExpression)expression).Member;
-            var fi = memberInfo as FieldInfo;
+            Expression expression = EliminateConvert(callExpr.Body);
+            MemberInfo memberInfo = ((MemberExpression)expression).Member;
+            FieldInfo fi = memberInfo as FieldInfo;
             if (fi == null)
+            {
                 throw new ArgumentException($"Bad expression. {memberInfo} is not a FieldInfo");
+            }
+
             return fi;
         }
 
         public static PropertyInfo GetProp<T>(Expression<Func<T, object>> readPropFunc, params Type[] classGenericArgs)
         {
-            var expression = EliminateConvert(readPropFunc.Body);
-            var memberInfo = ((MemberExpression)expression).Member;
-            var propertyInfo = memberInfo as PropertyInfo;
+            Expression expression = EliminateConvert(readPropFunc.Body);
+            MemberInfo memberInfo = ((MemberExpression)expression).Member;
+            PropertyInfo propertyInfo = memberInfo as PropertyInfo;
             if (propertyInfo == null)
+            {
                 throw new ArgumentException($"Bad expression. {memberInfo} is not a PropertyInfo");
-            if (classGenericArgs.Length == 0)
-                return propertyInfo;
-            var mt = propertyInfo.MetadataToken;
-            var type = propertyInfo.ReflectedType;
-            var resultReflectedType = type.GetGenericTypeDefinition().MakeGenericType(classGenericArgs);
-            var propertyInfos = resultReflectedType.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+            }
 
-            foreach (var info in propertyInfos)
+            if (classGenericArgs.Length == 0)
+            {
+                return propertyInfo;
+            }
+
+            int mt = propertyInfo.MetadataToken;
+            Type type = propertyInfo.ReflectedType;
+            Type resultReflectedType = type.GetGenericTypeDefinition().MakeGenericType(classGenericArgs);
+            PropertyInfo[] propertyInfos = resultReflectedType.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+
+            foreach (PropertyInfo info in propertyInfos)
             {
                 if (info.MetadataToken == mt)
+                {
                     return info;
+                }
             }
             throw new NotSupportedException("not found");
         }
 
         public static FieldInfo GetField<T>(Expression<Func<T, object>> readPropFunc)
         {
-            var expression = EliminateConvert(readPropFunc.Body);
-            var memberInfo = ((MemberExpression)expression).Member;
-            var propertyInfo = memberInfo as FieldInfo;
+            Expression expression = EliminateConvert(readPropFunc.Body);
+            MemberInfo memberInfo = ((MemberExpression)expression).Member;
+            FieldInfo propertyInfo = memberInfo as FieldInfo;
             if (propertyInfo == null)
+            {
                 throw new ArgumentException($"Bad expression. {memberInfo} is not a FieldInfo");
+            }
+
             return propertyInfo;
         }
 
@@ -142,37 +172,42 @@ namespace GrEmit.Utils
                                                                                     Type[] classGenericArgs,
                                                                                     Type[] methodGenericArgs)
         {
-            var methodCallExpression = (MethodCallExpression)callExpr.Body;
-            var methodInfo = methodCallExpression.Method;
+            MethodCallExpression methodCallExpression = (MethodCallExpression)callExpr.Body;
+            MethodInfo methodInfo = methodCallExpression.Method;
             return ConstructGenericMethodDefinitionForGenericClass(methodInfo.ReflectedType, methodInfo, classGenericArgs, methodGenericArgs);
         }
 
         public static MethodInfo GetMethodByMetadataToken(Type type, int methodMetedataToken)
         {
-            var methodInfos = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            MethodInfo[] methodInfos = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
             //todo сделать нормально
-            foreach (var methodInfo in methodInfos)
+            foreach (MethodInfo methodInfo in methodInfos)
             {
                 if (methodInfo.MetadataToken == methodMetedataToken)
+                {
                     return methodInfo;
+                }
             }
             return null;
         }
 
         public static MethodInfo ConstructGenericMethodDefinitionForGenericClass(Type type, MethodInfo methodInfo, Type[] classGenericArgs, Type[] methodGenericArgs)
         {
-            var resultReflectedType = type.IsGenericType
+            Type resultReflectedType = type.IsGenericType
                                           ? type.GetGenericTypeDefinition().MakeGenericType(classGenericArgs)
                                           : type;
-            var sourceMethodDefinition = methodInfo.IsGenericMethod
+            MethodInfo sourceMethodDefinition = methodInfo.IsGenericMethod
                                              ? methodInfo.GetGenericMethodDefinition()
                                              : methodInfo;
 
-            var methodBase = MethodBase.GetMethodFromHandle(
+            MethodBase methodBase = MethodBase.GetMethodFromHandle(
                 sourceMethodDefinition.MethodHandle, resultReflectedType.TypeHandle);
-            var constructedMethodForResultType = (MethodInfo)methodBase;
+            MethodInfo constructedMethodForResultType = (MethodInfo)methodBase;
             if (methodInfo.IsGenericMethod)
+            {
                 return constructedMethodForResultType.MakeGenericMethod(methodGenericArgs);
+            }
+
             return constructedMethodForResultType;
         }
 
@@ -201,27 +236,39 @@ namespace GrEmit.Utils
         private static Expression EliminateConvert(Expression expression)
         {
             if (expression.NodeType == ExpressionType.Convert)
+            {
                 return ((UnaryExpression)expression).Operand;
+            }
+
             return expression;
         }
 
         private static ConstructorInfo ObjectConstruction(Expression expression)
         {
-            var newExpression = (NewExpression)expression;
+            NewExpression newExpression = (NewExpression)expression;
             return newExpression.Constructor;
         }
 
         private static MethodInfo GetMethodDefinitionImpl(Expression body)
         {
-            var binaryExpression = body as BinaryExpression;
+            BinaryExpression binaryExpression = body as BinaryExpression;
             if (binaryExpression != null)
+            {
                 return (binaryExpression).Method;
-            var unaryExpression = body as UnaryExpression;
+            }
+
+            UnaryExpression unaryExpression = body as UnaryExpression;
             if (unaryExpression != null)
+            {
                 return (unaryExpression).Method;
-            var methodCallExpression = body as MethodCallExpression;
+            }
+
+            MethodCallExpression methodCallExpression = body as MethodCallExpression;
             if (methodCallExpression != null)
+            {
                 return (methodCallExpression).Method;
+            }
+
             throw new InvalidOperationException("unknown expression " + body);
         }
     }

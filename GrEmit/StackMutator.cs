@@ -1,11 +1,11 @@
+using GrEmit.InstructionComments;
+using GrEmit.Utils;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-
-using GrEmit.InstructionComments;
-using GrEmit.Utils;
 
 namespace GrEmit
 {
@@ -79,11 +79,17 @@ namespace GrEmit
         public void Push(Type type)
         {
             if (type == null)
+            {
                 Push(ESType.Zero);
+            }
             else if (type.IsInterface && !type.IsByRef && !type.IsPointer) // todo hack for Mono: typeof(IList).MakeByRefType().IsInterface = true
-                Push(new ComplexESType(typeof(object), new[] {type}));
+            {
+                Push(new ComplexESType(typeof(object), new[] { type }));
+            }
             else
+            {
                 Push(new SimpleESType(type));
+            }
         }
 
         public override string ToString()
@@ -104,32 +110,42 @@ namespace GrEmit
         protected static void CheckNotStruct(GroboIL il, ESType type)
         {
             if (ToCLIType(type) == CLIType.Struct)
+            {
                 ThrowError(il, $"Struct of type '{type}' is not valid at this point");
+            }
         }
 
         protected static void CheckNotEmpty(GroboIL il, EvaluationStack stack, Func<string> message)
         {
             if (stack.Count == 0)
+            {
                 ThrowError(il, message());
+            }
         }
 
         protected static void CheckIsAPointer(GroboIL il, ESType type)
         {
-            var cliType = ToCLIType(type);
+            CLIType cliType = ToCLIType(type);
             if (cliType != CLIType.Pointer && cliType != CLIType.NativeInt)
+            {
                 ThrowError(il, $"A pointer type expected but was '{type}'");
+            }
         }
 
         protected static void CheckCanBeAssigned(GroboIL il, Type to, ESType from)
         {
             if (!CanBeAssigned(to, from, il.VerificationKind))
+            {
                 ThrowError(il, $"Unable to set a value of type '{@from}' to an instance of type '{Formatter.Format(to)}'");
+            }
         }
 
         protected static void CheckCanBeAssigned(GroboIL il, Type to, Type from)
         {
             if (!CanBeAssigned(to, from, il.VerificationKind))
+            {
                 ThrowError(il, $"Unable to set a value of type '{Formatter.Format(@from)}' to an instance of type '{Formatter.Format(to)}'");
+            }
         }
 
         protected static bool CanBeAssigned(Type to, Type from, TypesAssignabilityVerificationKind verificationKind)
@@ -139,27 +155,25 @@ namespace GrEmit
 
         protected void SaveOrCheck(GroboIL il, EvaluationStack stack, GroboIL.Label label)
         {
-            ESType[] labelStack;
-            if (!il.labelStacks.TryGetValue(label, out labelStack))
+            if (!il.labelStacks.TryGetValue(label, out ESType[] labelStack))
             {
                 il.labelStacks.Add(label, stack.Reverse().ToArray());
                 Propogate(il, il.ilCode.GetLabelLineNumber(label), stack);
             }
             else
             {
-                ESType[] merged;
-                var comparisonResult = CompareStacks(stack.Reverse().ToArray(), labelStack, out merged);
+                StacksComparisonResult comparisonResult = CompareStacks(stack.Reverse().ToArray(), labelStack, out ESType[] merged);
                 switch (comparisonResult)
                 {
-                case StacksComparisonResult.Equal:
-                    return;
-                case StacksComparisonResult.Inconsistent:
-                    ThrowError(il, string.Format("Inconsistent stack for the label '{0}'{1}Stack #1: {2}{1}Stack #2: {3}", label.Name, Environment.NewLine, stack, new EvaluationStack(labelStack)));
-                    break;
-                case StacksComparisonResult.Equivalent:
-                    il.labelStacks[label] = merged;
-                    Propogate(il, il.ilCode.GetLabelLineNumber(label), new EvaluationStack(merged));
-                    break;
+                    case StacksComparisonResult.Equal:
+                        return;
+                    case StacksComparisonResult.Inconsistent:
+                        ThrowError(il, string.Format("Inconsistent stack for the label '{0}'{1}Stack #1: {2}{1}Stack #2: {3}", label.Name, Environment.NewLine, stack, new EvaluationStack(labelStack)));
+                        break;
+                    case StacksComparisonResult.Equivalent:
+                        il.labelStacks[label] = merged;
+                        Propogate(il, il.ilCode.GetLabelLineNumber(label), new EvaluationStack(merged));
+                        break;
                 }
             }
         }
@@ -171,23 +185,27 @@ namespace GrEmit
 
         protected static Type Canonize(Type type)
         {
-            if (type == null) return null;
+            if (type == null)
+            {
+                return null;
+            }
+
             switch (Type.GetTypeCode(type))
             {
-            case TypeCode.Boolean:
-            case TypeCode.Byte:
-            case TypeCode.SByte:
-            case TypeCode.Int16:
-            case TypeCode.UInt16:
-            case TypeCode.Int32:
-            case TypeCode.UInt32:
-            case TypeCode.Char:
-                type = typeof(int);
-                break;
-            case TypeCode.Int64:
-            case TypeCode.UInt64:
-                type = typeof(long);
-                break;
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                case TypeCode.Char:
+                    type = typeof(int);
+                    break;
+                case TypeCode.Int64:
+                case TypeCode.UInt64:
+                    type = typeof(long);
+                    break;
             }
             return type;
         }
@@ -195,168 +213,231 @@ namespace GrEmit
         protected static CLIType ToCLIType(ESType esType)
         {
             if (esType == null)
+            {
                 return CLIType.Zero;
-            var simpleESType = esType as SimpleESType;
+            }
+
+            SimpleESType simpleESType = esType as SimpleESType;
             return simpleESType == null ? CLIType.Object : ToCLIType(simpleESType.Type); // ComplexESType is always an object
         }
 
         private static CLIType ToLowLevelCLIType(ESType esType)
         {
             if (esType == null)
+            {
                 return CLIType.NativeInt;
-            var simpleESType = esType as SimpleESType;
+            }
+
+            SimpleESType simpleESType = esType as SimpleESType;
             return simpleESType == null ? CLIType.NativeInt : ToLowLevelCLIType(simpleESType.Type); // ComplexESType is always an object
         }
 
         protected static CLIType ToCLIType(Type type)
         {
             if (type == null)
+            {
                 return CLIType.Zero;
+            }
+
             if (!type.IsValueType)
             {
                 if (type.IsByRef)
+                {
                     return CLIType.Pointer;
+                }
+
                 return type.IsPointer ? CLIType.NativeInt : CLIType.Object;
             }
             if (type.IsPrimitive)
             {
                 if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                {
                     return CLIType.NativeInt;
-                var typeCode = Type.GetTypeCode(type);
+                }
+
+                TypeCode typeCode = Type.GetTypeCode(type);
                 switch (typeCode)
                 {
-                case TypeCode.Boolean:
-                case TypeCode.Byte:
-                case TypeCode.Char:
-                case TypeCode.Int16:
-                case TypeCode.Int32:
-                case TypeCode.SByte:
-                case TypeCode.UInt16:
-                case TypeCode.UInt32:
-                    return CLIType.Int32;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    return CLIType.Int64;
-                case TypeCode.Double:
-                case TypeCode.Single:
-                    return CLIType.Float;
-                default:
-                    return CLIType.Struct;
+                    case TypeCode.Boolean:
+                    case TypeCode.Byte:
+                    case TypeCode.Char:
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.SByte:
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                        return CLIType.Int32;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        return CLIType.Int64;
+                    case TypeCode.Double:
+                    case TypeCode.Single:
+                        return CLIType.Float;
+                    default:
+                        return CLIType.Struct;
                 }
             }
-            if (type.IsGenericType) return CLIType.Struct;
-            if (type is EnumBuilder) return ToCLIType(type.UnderlyingSystemType);
+            if (type.IsGenericType)
+            {
+                return CLIType.Struct;
+            }
+
+            if (type is EnumBuilder)
+            {
+                return ToCLIType(type.UnderlyingSystemType);
+            }
+
             return type.IsEnum ? ToCLIType(Enum.GetUnderlyingType(type)) : CLIType.Struct;
         }
 
         private static CLIType ToLowLevelCLIType(Type type)
         {
             if (type == null)
+            {
                 return CLIType.NativeInt;
+            }
+
             if (!type.IsValueType)
+            {
                 return CLIType.NativeInt;
+            }
+
             if (type.IsPrimitive)
             {
                 if (type == typeof(IntPtr) || type == typeof(UIntPtr))
+                {
                     return CLIType.NativeInt;
-                var typeCode = Type.GetTypeCode(type);
+                }
+
+                TypeCode typeCode = Type.GetTypeCode(type);
                 switch (typeCode)
                 {
-                case TypeCode.Boolean:
-                case TypeCode.Byte:
-                case TypeCode.Char:
-                case TypeCode.Int16:
-                case TypeCode.Int32:
-                case TypeCode.SByte:
-                case TypeCode.UInt16:
-                case TypeCode.UInt32:
-                    return CLIType.Int32;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    return CLIType.Int64;
-                case TypeCode.Double:
-                case TypeCode.Single:
-                    return CLIType.Float;
-                default:
-                    return CLIType.Struct;
+                    case TypeCode.Boolean:
+                    case TypeCode.Byte:
+                    case TypeCode.Char:
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.SByte:
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                        return CLIType.Int32;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        return CLIType.Int64;
+                    case TypeCode.Double:
+                    case TypeCode.Single:
+                        return CLIType.Float;
+                    default:
+                        return CLIType.Struct;
                 }
             }
-            if (type.IsGenericType) return CLIType.Struct;
-            if (type is EnumBuilder) return ToLowLevelCLIType(type.UnderlyingSystemType);
+            if (type.IsGenericType)
+            {
+                return CLIType.Struct;
+            }
+
+            if (type is EnumBuilder)
+            {
+                return ToLowLevelCLIType(type.UnderlyingSystemType);
+            }
+
             return type.IsEnum ? ToLowLevelCLIType(Enum.GetUnderlyingType(type)) : CLIType.Struct;
         }
 
         private static bool CanBeAssigned(Type to, ESType esFrom, TypesAssignabilityVerificationKind verificationKind)
         {
             if (verificationKind == TypesAssignabilityVerificationKind.None)
+            {
                 return true;
-            var cliTo = verificationKind == TypesAssignabilityVerificationKind.HighLevel ? ToCLIType(to) : ToLowLevelCLIType(to);
-            var cliFrom = verificationKind == TypesAssignabilityVerificationKind.HighLevel ? ToCLIType(esFrom) : ToLowLevelCLIType(esFrom);
+            }
 
-            var from = esFrom.ToType();
+            CLIType cliTo = verificationKind == TypesAssignabilityVerificationKind.HighLevel ? ToCLIType(to) : ToLowLevelCLIType(to);
+            CLIType cliFrom = verificationKind == TypesAssignabilityVerificationKind.HighLevel ? ToCLIType(esFrom) : ToLowLevelCLIType(esFrom);
+
+            Type from = esFrom.ToType();
             switch (cliTo)
             {
-            case CLIType.Int32:
-                return cliFrom == CLIType.Int32 || cliFrom == CLIType.NativeInt || cliFrom == CLIType.Zero;
-            case CLIType.NativeInt:
-                return cliFrom == CLIType.Int32 || cliFrom == CLIType.NativeInt || cliFrom == CLIType.Zero;
-            case CLIType.Int64:
-                return cliFrom == CLIType.Int64 || cliFrom == CLIType.Zero;
-            case CLIType.Float:
-                return cliFrom == CLIType.Float || cliFrom == CLIType.Zero;
-            case CLIType.Struct:
-                return ReflectionExtensions.Equal(to, from);
-            case CLIType.Pointer:
-                if (cliFrom == CLIType.Zero || ReflectionExtensions.Equal(to, from))
+                case CLIType.Int32:
+                    return cliFrom == CLIType.Int32 || cliFrom == CLIType.NativeInt || cliFrom == CLIType.Zero;
+                case CLIType.NativeInt:
+                    return cliFrom == CLIType.Int32 || cliFrom == CLIType.NativeInt || cliFrom == CLIType.Zero;
+                case CLIType.Int64:
+                    return cliFrom == CLIType.Int64 || cliFrom == CLIType.Zero;
+                case CLIType.Float:
+                    return cliFrom == CLIType.Float || cliFrom == CLIType.Zero;
+                case CLIType.Struct:
+                    return ReflectionExtensions.Equal(to, from);
+                case CLIType.Pointer:
+                    if (cliFrom == CLIType.Zero || ReflectionExtensions.Equal(to, from))
+                    {
+                        return true;
+                    }
+
+                    if (cliFrom != CLIType.Pointer)
+                    {
+                        return false;
+                    }
+
+                    to = to.GetElementType();
+                    from = from.GetElementType();
+                    return to.IsValueType && from.IsValueType;
+                case CLIType.Object:
+                    if (cliFrom == CLIType.Zero || ReflectionExtensions.Equal(to, from))
+                    {
+                        return true;
+                    }
+
+                    if (cliFrom != CLIType.Object)
+                    {
+                        return false;
+                    }
+
+                    SimpleESType simpleESFrom = esFrom as SimpleESType;
+                    if (simpleESFrom != null)
+                    {
+                        return ReflectionExtensions.IsAssignableFrom(to, from);
+                    }
+
+                    ComplexESType complexESFrom = (ComplexESType)esFrom;
+                    return ReflectionExtensions.IsAssignableFrom(to, complexESFrom.BaseType) || complexESFrom.Interfaces.Any(interfaCe => ReflectionExtensions.IsAssignableFrom(to, interfaCe));
+                case CLIType.Zero:
                     return true;
-                if (cliFrom != CLIType.Pointer)
-                    return false;
-                to = to.GetElementType();
-                from = from.GetElementType();
-                return to.IsValueType && from.IsValueType;
-            case CLIType.Object:
-                if (cliFrom == CLIType.Zero || ReflectionExtensions.Equal(to, from))
-                    return true;
-                if (cliFrom != CLIType.Object)
-                    return false;
-                var simpleESFrom = esFrom as SimpleESType;
-                if (simpleESFrom != null)
-                    return ReflectionExtensions.IsAssignableFrom(to, from);
-                var complexESFrom = (ComplexESType)esFrom;
-                return ReflectionExtensions.IsAssignableFrom(to, complexESFrom.BaseType) || complexESFrom.Interfaces.Any(interfaCe => ReflectionExtensions.IsAssignableFrom(to, interfaCe));
-            case CLIType.Zero:
-                return true;
-            default:
-                throw new InvalidOperationException($"CLI type '{cliTo}' is not valid at this point");
+                default:
+                    throw new InvalidOperationException($"CLI type '{cliTo}' is not valid at this point");
             }
         }
 
         private static void Propogate(GroboIL il, int lineNumber, EvaluationStack stack)
         {
             if (lineNumber < 0)
+            {
                 return;
+            }
+
             while (true)
             {
-                var comment = il.ilCode.GetComment(lineNumber);
+                ILInstructionComment comment = il.ilCode.GetComment(lineNumber);
                 if (comment == null)
+                {
                     break;
-                var instruction = (ILCode.ILInstruction)il.ilCode.GetInstruction(lineNumber);
+                }
+
+                ILCode.ILInstruction instruction = (ILCode.ILInstruction)il.ilCode.GetInstruction(lineNumber);
                 StackMutatorCollection.Mutate(instruction.OpCode, il, instruction.Parameter, ref stack);
                 if (comment is StackILInstructionComment)
                 {
-                    var instructionStack = ((StackILInstructionComment)comment).Stack;
-                    ESType[] merged;
-                    var comparisonResult = CompareStacks(stack.Reverse().ToArray(), instructionStack, out merged);
+                    ESType[] instructionStack = ((StackILInstructionComment)comment).Stack;
+                    StacksComparisonResult comparisonResult = CompareStacks(stack.Reverse().ToArray(), instructionStack, out ESType[] merged);
                     switch (comparisonResult)
                     {
-                    case StacksComparisonResult.Equal:
-                        return;
-                    case StacksComparisonResult.Inconsistent:
-                        ThrowError(il, string.Format("Inconsistent stack for the line {0}{1}Stack #1: {2}{1}Stack #2: {3}", (lineNumber + 1), Environment.NewLine, stack, new EvaluationStack(instructionStack)));
-                        break;
-                    case StacksComparisonResult.Equivalent:
-                        stack = new EvaluationStack(merged);
-                        break;
+                        case StacksComparisonResult.Equal:
+                            return;
+                        case StacksComparisonResult.Inconsistent:
+                            ThrowError(il, string.Format("Inconsistent stack for the line {0}{1}Stack #1: {2}{1}Stack #2: {3}", (lineNumber + 1), Environment.NewLine, stack, new EvaluationStack(instructionStack)));
+                            break;
+                        case StacksComparisonResult.Equivalent:
+                            stack = new EvaluationStack(merged);
+                            break;
                     }
                 }
                 il.ilCode.SetComment(lineNumber, new StackILInstructionComment(stack.Reverse().ToArray()));
@@ -367,17 +448,29 @@ namespace GrEmit
         private static bool EqualESTypes(ESType first, ESType second)
         {
             if ((first is SimpleESType) ^ (second is SimpleESType))
+            {
                 return false;
+            }
+
             if (first.ToType() != second.ToType())
+            {
                 return false;
+            }
+
             if (first is SimpleESType)
+            {
                 return true;
-            var firstInterfaces = new HashSet<Type>(((ComplexESType)first).Interfaces);
-            var secondInterfaces = ((ComplexESType)second).Interfaces;
-            foreach (var type in secondInterfaces)
+            }
+
+            HashSet<Type> firstInterfaces = new HashSet<Type>(((ComplexESType)first).Interfaces);
+            Type[] secondInterfaces = ((ComplexESType)second).Interfaces;
+            foreach (Type type in secondInterfaces)
             {
                 if (!firstInterfaces.Contains(type))
+                {
                     return false;
+                }
+
                 firstInterfaces.Remove(type);
             }
             return firstInterfaces.Count == 0;
@@ -387,129 +480,173 @@ namespace GrEmit
         {
             merged = null;
             if (first.Length != second.Length)
-                return StacksComparisonResult.Inconsistent;
-            ESType[] result = null;
-            for (var i = 0; i < first.Length; ++i)
             {
-                var firstCLIType = ToCLIType(first[i]);
-                var secondCLIType = ToCLIType(second[i]);
+                return StacksComparisonResult.Inconsistent;
+            }
+
+            ESType[] result = null;
+            for (int i = 0; i < first.Length; ++i)
+            {
+                CLIType firstCLIType = ToCLIType(first[i]);
+                CLIType secondCLIType = ToCLIType(second[i]);
                 if (firstCLIType != CLIType.Zero && secondCLIType != CLIType.Zero && firstCLIType != secondCLIType)
+                {
                     return StacksComparisonResult.Inconsistent;
+                }
+
                 if (!EqualESTypes(first[i], second[i]))
                 {
-                    var common = FindCommonType(firstCLIType, first[i], second[i]);
+                    ESType common = FindCommonType(firstCLIType, first[i], second[i]);
                     if (common == null)
+                    {
                         return StacksComparisonResult.Inconsistent;
+                    }
+
                     if (result == null)
                     {
                         result = new ESType[first.Length];
-                        for (var j = 0; j < i; ++j)
+                        for (int j = 0; j < i; ++j)
+                        {
                             result[j] = first[j];
+                        }
                     }
                     result[i] = common;
                 }
                 else if (result != null)
+                {
                     result[i] = first[i];
+                }
             }
             if (result == null)
+            {
                 return StacksComparisonResult.Equal;
+            }
+
             merged = result;
             return StacksComparisonResult.Equivalent;
         }
 
         private static ESType FindCommonType(CLIType cliType, ESType first, ESType second)
         {
-            if (first.ToType() == null) return second;
-            if (second.ToType() == null) return first;
+            if (first.ToType() == null)
+            {
+                return second;
+            }
+
+            if (second.ToType() == null)
+            {
+                return first;
+            }
+
             switch (cliType)
             {
-            case CLIType.Int32:
-                return new SimpleESType(typeof(int));
-            case CLIType.Int64:
-                return new SimpleESType(typeof(long));
-            case CLIType.Float:
-                return new SimpleESType(typeof(double));
-            case CLIType.NativeInt:
-                {
-                    if (((SimpleESType)first).Type.IsPointer && ((SimpleESType)second).Type.IsPointer)
-                        return new SimpleESType(typeof(void).MakePointerType());
-                    return new SimpleESType(typeof(IntPtr));
-                }
-            case CLIType.Pointer:
-                {
-                    var firstElementType = ((SimpleESType)first).Type.GetElementType();
-                    var secondElementType = ((SimpleESType)second).Type.GetElementType();
-                    if (!firstElementType.IsValueType || !secondElementType.IsValueType)
-                        return null;
-                    return Marshal.SizeOf(firstElementType) <= Marshal.SizeOf(secondElementType) ? first : second;
-                }
-            case CLIType.Struct:
-                return null;
-            case CLIType.Object:
-                {
-                    var baseType = first.ToType().FindBaseClassWith(second.ToType());
-                    var firstInterfaces = new HashSet<Type>(new ReflectionExtensions.TypesComparer());
-                    if (first is SimpleESType)
-                        ((SimpleESType)first).Type.GetInterfacesCollectionStupid(firstInterfaces);
-                    else
+                case CLIType.Int32:
+                    return new SimpleESType(typeof(int));
+                case CLIType.Int64:
+                    return new SimpleESType(typeof(long));
+                case CLIType.Float:
+                    return new SimpleESType(typeof(double));
+                case CLIType.NativeInt:
                     {
-                        ((ComplexESType)first).BaseType.GetInterfacesCollectionStupid(firstInterfaces);
-                        foreach (var interfaCe in ((ComplexESType)first).Interfaces)
-                            firstInterfaces.Add(interfaCe);
-                    }
-                    var secondInterfaces = new HashSet<Type>(new ReflectionExtensions.TypesComparer());
-                    if (second is SimpleESType)
-                        ((SimpleESType)second).Type.GetInterfacesCollectionStupid(secondInterfaces);
-                    else
-                    {
-                        ((ComplexESType)second).BaseType.GetInterfacesCollectionStupid(secondInterfaces);
-                        foreach (var interfaCe in ((ComplexESType)second).Interfaces)
-                            secondInterfaces.Add(interfaCe);
-                    }
-                    HashSet<Type> intersected;
-                    if (firstInterfaces.Count > secondInterfaces.Count)
-                    {
-                        firstInterfaces.IntersectWith(secondInterfaces);
-                        intersected = firstInterfaces;
-                    }
-                    else
-                    {
-                        secondInterfaces.IntersectWith(firstInterfaces);
-                        intersected = secondInterfaces;
-                    }
-                    intersected.Add(baseType);
-
-                    //var firstInterfaces = ((first is SimpleESType)
-                    //                           ? ((SimpleESType)first).Type.GetTypesArray()
-                    //                           : ((ComplexESType)first).BaseType.GetTypesArray().Concat(((ComplexESType)first).Interfaces)).Where(t => t.IsInterface).ToArray();
-                    //var secondInterfaces = ((second is SimpleESType)
-                    //                            ? ((SimpleESType)second).Type.GetTypesArray()
-                    //                            : ((ComplexESType)second).BaseType.GetTypesArray().Concat(((ComplexESType)second).Interfaces)).Where(t => t.IsInterface).ToArray();
-                    //var hashSet = new HashSet<Type>(firstInterfaces.Intersect(secondInterfaces).Concat(new[] {baseType}), new ReflectionExtensions.TypesComparer());
-                    while (true)
-                    {
-                        var end = true;
-                        foreach (var type in intersected.ToArray())
+                        if (((SimpleESType)first).Type.IsPointer && ((SimpleESType)second).Type.IsPointer)
                         {
-                            var children = ReflectionExtensions.GetInterfaces(type);
-                            foreach (var child in children)
+                            return new SimpleESType(typeof(void).MakePointerType());
+                        }
+
+                        return new SimpleESType(typeof(IntPtr));
+                    }
+                case CLIType.Pointer:
+                    {
+                        Type firstElementType = ((SimpleESType)first).Type.GetElementType();
+                        Type secondElementType = ((SimpleESType)second).Type.GetElementType();
+                        if (!firstElementType.IsValueType || !secondElementType.IsValueType)
+                        {
+                            return null;
+                        }
+
+                        return Marshal.SizeOf(firstElementType) <= Marshal.SizeOf(secondElementType) ? first : second;
+                    }
+                case CLIType.Struct:
+                    return null;
+                case CLIType.Object:
+                    {
+                        Type baseType = first.ToType().FindBaseClassWith(second.ToType());
+                        HashSet<Type> firstInterfaces = new HashSet<Type>(new ReflectionExtensions.TypesComparer());
+                        if (first is SimpleESType)
+                        {
+                            ((SimpleESType)first).Type.GetInterfacesCollectionStupid(firstInterfaces);
+                        }
+                        else
+                        {
+                            ((ComplexESType)first).BaseType.GetInterfacesCollectionStupid(firstInterfaces);
+                            foreach (Type interfaCe in ((ComplexESType)first).Interfaces)
                             {
-                                if (intersected.Contains(child))
-                                {
-                                    end = false;
-                                    intersected.Remove(child);
-                                }
+                                firstInterfaces.Add(interfaCe);
                             }
                         }
-                        if (end) break;
+                        HashSet<Type> secondInterfaces = new HashSet<Type>(new ReflectionExtensions.TypesComparer());
+                        if (second is SimpleESType)
+                        {
+                            ((SimpleESType)second).Type.GetInterfacesCollectionStupid(secondInterfaces);
+                        }
+                        else
+                        {
+                            ((ComplexESType)second).BaseType.GetInterfacesCollectionStupid(secondInterfaces);
+                            foreach (Type interfaCe in ((ComplexESType)second).Interfaces)
+                            {
+                                secondInterfaces.Add(interfaCe);
+                            }
+                        }
+                        HashSet<Type> intersected;
+                        if (firstInterfaces.Count > secondInterfaces.Count)
+                        {
+                            firstInterfaces.IntersectWith(secondInterfaces);
+                            intersected = firstInterfaces;
+                        }
+                        else
+                        {
+                            secondInterfaces.IntersectWith(firstInterfaces);
+                            intersected = secondInterfaces;
+                        }
+                        intersected.Add(baseType);
+
+                        //var firstInterfaces = ((first is SimpleESType)
+                        //                           ? ((SimpleESType)first).Type.GetTypesArray()
+                        //                           : ((ComplexESType)first).BaseType.GetTypesArray().Concat(((ComplexESType)first).Interfaces)).Where(t => t.IsInterface).ToArray();
+                        //var secondInterfaces = ((second is SimpleESType)
+                        //                            ? ((SimpleESType)second).Type.GetTypesArray()
+                        //                            : ((ComplexESType)second).BaseType.GetTypesArray().Concat(((ComplexESType)second).Interfaces)).Where(t => t.IsInterface).ToArray();
+                        //var hashSet = new HashSet<Type>(firstInterfaces.Intersect(secondInterfaces).Concat(new[] {baseType}), new ReflectionExtensions.TypesComparer());
+                        while (true)
+                        {
+                            bool end = true;
+                            foreach (Type type in intersected.ToArray())
+                            {
+                                Type[] children = ReflectionExtensions.GetInterfaces(type);
+                                foreach (Type child in children)
+                                {
+                                    if (intersected.Contains(child))
+                                    {
+                                        end = false;
+                                        intersected.Remove(child);
+                                    }
+                                }
+                            }
+                            if (end)
+                            {
+                                break;
+                            }
+                        }
+                        intersected.Remove(baseType);
+                        if (intersected.Count == 0)
+                        {
+                            return new SimpleESType(baseType);
+                        }
+
+                        return new ComplexESType(baseType, intersected.ToArray());
                     }
-                    intersected.Remove(baseType);
-                    if (intersected.Count == 0)
-                        return new SimpleESType(baseType);
-                    return new ComplexESType(baseType, intersected.ToArray());
-                }
-            default:
-                throw new InvalidOperationException($"CLI type '{cliType}' is not valid at this point");
+                default:
+                    throw new InvalidOperationException($"CLI type '{cliType}' is not valid at this point");
             }
         }
 

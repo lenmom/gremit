@@ -6,7 +6,7 @@ namespace GrEmit.StackMutators
     {
         public override void Mutate(GroboIL il, ILInstructionParameter parameter, ref EvaluationStack stack)
         {
-            var index = (int)((PrimitiveILInstructionParameter)parameter).Value;
+            int index = (int)((PrimitiveILInstructionParameter)parameter).Value;
             stack.Push(il.methodParameterTypes[index]);
         }
     }

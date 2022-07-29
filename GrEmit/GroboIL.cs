@@ -1,3 +1,7 @@
+using GrEmit.InstructionComments;
+using GrEmit.InstructionParameters;
+using GrEmit.Utils;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,10 +10,6 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-
-using GrEmit.InstructionComments;
-using GrEmit.InstructionParameters;
-using GrEmit.Utils;
 
 namespace GrEmit
 {
@@ -46,14 +46,14 @@ namespace GrEmit
             methodReturnType = returnType;
             methodParameterTypes = parameterTypes;
             VerificationKind = TypesAssignabilityVerificationKind.HighLevel;
-/*
-            OpCodes.Localloc;
-            OpCodes.Mkrefany;
-            OpCodes.Refanytype;
-            OpCodes.Refanyval;
-            OpCodes.Rethrow;
-            OpCodes.Sizeof;
-*/
+            /*
+                        OpCodes.Localloc;
+                        OpCodes.Mkrefany;
+                        OpCodes.Refanytype;
+                        OpCodes.Refanyval;
+                        OpCodes.Rethrow;
+                        OpCodes.Sizeof;
+            */
         }
 
         public GroboIL(DynamicMethod method, bool analyzeStack = true)
@@ -70,7 +70,7 @@ namespace GrEmit
                    method.ReturnType,
                    method.IsStatic
                        ? ReflectionExtensions.GetParameterTypes(method)
-                       : new[] {method.ReflectedType}.Concat(ReflectionExtensions.GetParameterTypes(method)).ToArray(),
+                       : new[] { method.ReflectedType }.Concat(ReflectionExtensions.GetParameterTypes(method)).ToArray(),
                    analyzeStack,
                    null)
         {
@@ -81,18 +81,20 @@ namespace GrEmit
                    method.ReturnType,
                    method.IsStatic
                        ? ReflectionExtensions.GetParameterTypes(method)
-                       : new[] {method.ReflectedType}.Concat(ReflectionExtensions.GetParameterTypes(method)).ToArray(),
+                       : new[] { method.ReflectedType }.Concat(ReflectionExtensions.GetParameterTypes(method)).ToArray(),
                    true,
                    symbolDocumentWriter)
         {
             if (symbolDocumentWriter == null)
+            {
                 throw new ArgumentNullException("symbolDocumentWriter");
+            }
         }
 
         public GroboIL(ConstructorBuilder constructor, bool analyzeStack = true)
             : this(constructor.GetILGenerator(),
                    typeof(void),
-                   new[] {constructor.ReflectedType}.Concat(ReflectionExtensions.GetParameterTypes(constructor)).ToArray(),
+                   new[] { constructor.ReflectedType }.Concat(ReflectionExtensions.GetParameterTypes(constructor)).ToArray(),
                    analyzeStack,
                    null)
         {
@@ -101,12 +103,14 @@ namespace GrEmit
         public GroboIL(ConstructorBuilder constructor, ISymbolDocumentWriter symbolDocumentWriter)
             : this(constructor.GetILGenerator(),
                    typeof(void),
-                   new[] {constructor.ReflectedType}.Concat(ReflectionExtensions.GetParameterTypes(constructor)).ToArray(),
+                   new[] { constructor.ReflectedType }.Concat(ReflectionExtensions.GetParameterTypes(constructor)).ToArray(),
                    true,
                    symbolDocumentWriter)
         {
             if (symbolDocumentWriter == null)
+            {
                 throw new ArgumentNullException("symbolDocumentWriter");
+            }
         }
 
         /// <summary>
@@ -117,11 +121,17 @@ namespace GrEmit
         public void Seal()
         {
             if (!analyzeStack)
+            {
                 return;
-            var lastInstruction = ilCode.Count == 0 ? null : ilCode.GetInstruction(ilCode.Count - 1) as ILCode.ILInstruction;
+            }
+
+            ILCode.ILInstruction lastInstruction = ilCode.Count == 0 ? null : ilCode.GetInstruction(ilCode.Count - 1) as ILCode.ILInstruction;
             if (lastInstruction == null || (lastInstruction.OpCode != OpCodes.Ret && lastInstruction.OpCode != OpCodes.Br
                                                                                   && lastInstruction.OpCode != OpCodes.Br_S && lastInstruction.OpCode != OpCodes.Throw && lastInstruction.OpCode != OpCodes.Jmp))
+            {
                 throw new InvalidOperationException("An IL program must end with one of the following instructions: 'ret', 'br', 'br.s', 'throw', 'jmp'");
+            }
+
             ilCode.CheckLabels();
         }
 
@@ -131,61 +141,83 @@ namespace GrEmit
             {
 #if NET45 // see https://apisof.net/catalog/System.Runtime.InteropServices.Marshal.GetExceptionPointers()
                 if (Marshal.GetExceptionPointers() != IntPtr.Zero)
+                {
                     return;
+                }
 #endif
 
 #pragma warning disable 618
                 if (Marshal.GetExceptionCode() != 0)
+                {
                     return;
+                }
 #pragma warning restore 618
 
                 Seal();
             }
             if (symbolDocumentWriter != null)
             {
-                var linesInfo = ilCode.GetLinesInfo();
-                for (var i = 0; i < linesInfo.Value.Count; ++i)
+                KeyValuePair<string, List<KeyValuePair<int, int>>> linesInfo = ilCode.GetLinesInfo();
+                for (int i = 0; i < linesInfo.Value.Count; ++i)
                 {
-                    var instruction = (ILCode.ILInstruction)ilCode.GetInstruction(i);
-                    var parameter = instruction.Parameter;
+                    ILCode.ILInstruction instruction = (ILCode.ILInstruction)ilCode.GetInstruction(i);
+                    ILInstructionParameter parameter = instruction.Parameter;
                     if (instruction.Kind == ILCode.InstructionKind.Instruction || instruction.Kind == ILCode.InstructionKind.DebugWriteLine)
+                    {
                         MarkSequencePoint(il, symbolDocumentWriter, linesInfo.Value[i].Key, 0, linesInfo.Value[i].Value, 1000);
-                    foreach (var prefix in instruction.Prefixes ?? new List<KeyValuePair<OpCode, ILInstructionParameter>>())
+
+                        /* Unmerged change from project 'GrEmit (netstandard2.1)'
+                        Before:
+                                            foreach (var prefix in instruction.Prefixes ?? new List<KeyValuePair<OpCode, ILInstructionParameter>>())
+                        After:
+                                            foreach (KeyValuePair<OpCode, ILInstructionParameter> prefix in instruction.Prefixes ?? new List<KeyValuePair<OpCode, ILInstructionParameter>>())
+                        */
+                    }
+
+                    foreach (KeyValuePair<OpCode, ILInstructionParameter> prefix in instruction.Prefixes ?? new List<KeyValuePair<OpCode, ILInstructionParameter>>())
+                    {
                         Emit(prefix.Key, prefix.Value);
+                    }
+
                     switch (instruction.Kind)
                     {
-                    case ILCode.InstructionKind.Instruction:
-                        Emit(instruction.OpCode, parameter);
-                        break;
-                    case ILCode.InstructionKind.Label:
-                        il.MarkLabel(((LabelILInstructionParameter)parameter).Label);
-                        break;
-                    case ILCode.InstructionKind.DebugWriteLine:
-                        if (parameter is StringILInstructionParameter)
-                            il.EmitWriteLine(((StringILInstructionParameter)parameter).Value);
-                        else
-                            il.EmitWriteLine(((LocalILInstructionParameter)parameter).Local);
-                        break;
-                    case ILCode.InstructionKind.TryStart:
-                        il.BeginExceptionBlock();
-                        break;
-                    case ILCode.InstructionKind.Catch:
-                        il.BeginCatchBlock(parameter == null ? null : ((TypeILInstructionParameter)parameter).Type);
-                        break;
-                    case ILCode.InstructionKind.Fault:
-                        il.BeginFaultBlock();
-                        break;
-                    case ILCode.InstructionKind.FilteredException:
-                        il.BeginExceptFilterBlock();
-                        break;
-                    case ILCode.InstructionKind.Finally:
-                        il.BeginFinallyBlock();
-                        break;
-                    case ILCode.InstructionKind.TryEnd:
-                        il.EndExceptionBlock();
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                        case ILCode.InstructionKind.Instruction:
+                            Emit(instruction.OpCode, parameter);
+                            break;
+                        case ILCode.InstructionKind.Label:
+                            il.MarkLabel(((LabelILInstructionParameter)parameter).Label);
+                            break;
+                        case ILCode.InstructionKind.DebugWriteLine:
+                            if (parameter is StringILInstructionParameter)
+                            {
+                                il.EmitWriteLine(((StringILInstructionParameter)parameter).Value);
+                            }
+                            else
+                            {
+                                il.EmitWriteLine(((LocalILInstructionParameter)parameter).Local);
+                            }
+
+                            break;
+                        case ILCode.InstructionKind.TryStart:
+                            il.BeginExceptionBlock();
+                            break;
+                        case ILCode.InstructionKind.Catch:
+                            il.BeginCatchBlock(parameter == null ? null : ((TypeILInstructionParameter)parameter).Type);
+                            break;
+                        case ILCode.InstructionKind.Fault:
+                            il.BeginFaultBlock();
+                            break;
+                        case ILCode.InstructionKind.FilteredException:
+                            il.BeginExceptFilterBlock();
+                            break;
+                        case ILCode.InstructionKind.Finally:
+                            il.BeginFinallyBlock();
+                            break;
+                        case ILCode.InstructionKind.TryEnd:
+                            il.EndExceptionBlock();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
             }
@@ -210,11 +242,14 @@ namespace GrEmit
         /// </returns>
         public Local DeclareLocal(Type localType, string name, bool pinned = false, bool appendUniquePrefix = true)
         {
-            var local = il.DeclareLocal(localType, pinned);
+            LocalBuilder local = il.DeclareLocal(localType, pinned);
             name = string.IsNullOrEmpty(name) ? "local" : name;
-            var uniqueName = !appendUniquePrefix ? name : name + "_" + localId++;
+            string uniqueName = !appendUniquePrefix ? name : name + "_" + localId++;
             if (symbolDocumentWriter != null)
+            {
                 Local.SetLocalSymInfo(local, uniqueName);
+            }
+
             return new Local(local, uniqueName);
         }
 
@@ -230,10 +265,13 @@ namespace GrEmit
         /// </returns>
         public Local DeclareLocal(Type localType, bool pinned = false)
         {
-            var local = il.DeclareLocal(localType, pinned);
-            var name = "local_" + localId++;
+            LocalBuilder local = il.DeclareLocal(localType, pinned);
+            string name = "local_" + localId++;
             if (symbolDocumentWriter != null)
+            {
                 Local.SetLocalSymInfo(local, name);
+            }
+
             return new Local(local, name);
         }
 
@@ -247,7 +285,7 @@ namespace GrEmit
         /// </returns>
         public Label DefineLabel(string name, bool appendUniquePrefix = true)
         {
-            var uniqueName = !appendUniquePrefix ? name : name + "_" + labelId++;
+            string uniqueName = !appendUniquePrefix ? name : name + "_" + labelId++;
             return new Label(il.DefineLabel(), uniqueName);
         }
 
@@ -259,15 +297,26 @@ namespace GrEmit
         /// </param>
         public void MarkLabel(Label label)
         {
-            var stackIsNull = stack == null;
+            bool stackIsNull = stack == null;
             if (!stackIsNull)
+            {
                 ilCode.MarkLabel(label, GetComment());
+            }
+
             if (analyzeStack)
+            {
                 MutateStack(default(OpCode), new LabelILInstructionParameter(label));
+            }
+
             if (stackIsNull)
+            {
                 ilCode.MarkLabel(label, GetComment());
+            }
+
             if (symbolDocumentWriter == null)
+            {
                 il.MarkLabel(label);
+            }
         }
 
         /// <summary>
@@ -278,7 +327,9 @@ namespace GrEmit
         {
             ilCode.WriteLine(new StringILInstructionParameter(str), GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitWriteLine(str);
+            }
         }
 
         /// <summary>
@@ -289,7 +340,9 @@ namespace GrEmit
         {
             ilCode.WriteLine(new LocalILInstructionParameter(local), GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitWriteLine(local);
+            }
         }
 
         /// <summary>
@@ -321,7 +374,9 @@ namespace GrEmit
         {
             ilCode.BeginExceptionBlock(GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.BeginExceptionBlock();
+            }
         }
 
         /// <summary>
@@ -333,10 +388,15 @@ namespace GrEmit
         public void BeginCatchBlock(Type exceptionType)
         {
             if (analyzeStack)
-                stack = new EvaluationStack(new ESType[] {new SimpleESType(exceptionType ?? typeof(Exception))});
+            {
+                stack = new EvaluationStack(new ESType[] { new SimpleESType(exceptionType ?? typeof(Exception)) });
+            }
+
             ilCode.BeginCatchBlock(exceptionType == null ? null : new TypeILInstructionParameter(exceptionType), GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.BeginCatchBlock(exceptionType);
+            }
         }
 
         /// <summary>
@@ -345,10 +405,15 @@ namespace GrEmit
         public void BeginExceptFilterBlock()
         {
             if (analyzeStack)
-                stack = new EvaluationStack(new ESType[] {new SimpleESType(typeof(Exception))});
+            {
+                stack = new EvaluationStack(new ESType[] { new SimpleESType(typeof(Exception)) });
+            }
+
             ilCode.BeginExceptFilterBlock(GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.BeginExceptFilterBlock();
+            }
         }
 
         /// <summary>
@@ -357,10 +422,15 @@ namespace GrEmit
         public void BeginFaultBlock()
         {
             if (analyzeStack)
+            {
                 stack = new EvaluationStack();
+            }
+
             ilCode.BeginFaultBlock(GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.BeginFaultBlock();
+            }
         }
 
         /// <summary>
@@ -369,10 +439,15 @@ namespace GrEmit
         public void BeginFinallyBlock()
         {
             if (analyzeStack)
+            {
                 stack = new EvaluationStack();
+            }
+
             ilCode.BeginFinallyBlock(GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.BeginFinallyBlock();
+            }
         }
 
         /// <summary>
@@ -382,7 +457,9 @@ namespace GrEmit
         {
             ilCode.EndExceptionBlock(GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EndExceptionBlock();
+            }
         }
 
         /// <summary>
@@ -426,11 +503,20 @@ namespace GrEmit
         public void Switch(params Label[] labels)
         {
             if (labels == null)
+            {
                 throw new ArgumentNullException("labels");
+            }
+
             if (labels.Length == 0)
+            {
                 throw new ArgumentException("At least one label must be specified", "labels");
+            }
+
             if (labels.Any(label => label == null))
+            {
                 throw new ArgumentException("All labels must be specified", "labels");
+            }
+
             Emit(OpCodes.Switch, labels);
         }
 
@@ -452,7 +538,10 @@ namespace GrEmit
         public void Leave(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Leave, label);
             stack = null;
         }
@@ -466,16 +555,27 @@ namespace GrEmit
         public void Jmp(MethodInfo method)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
+            }
+
             if (method.ReturnType != methodReturnType)
+            {
                 throw new ArgumentException($"The return type must be of type '{methodReturnType}'", "method");
-            var parameterTypes = method.GetParameters().Select(info => info.ParameterType).ToArray();
+            }
+
+            Type[] parameterTypes = method.GetParameters().Select(info => info.ParameterType).ToArray();
             if (parameterTypes.Length != methodParameterTypes.Length)
+            {
                 throw new ArgumentException($"The number of arguments must be equal to {methodParameterTypes.Length}", "method");
-            for (var i = 0; i < parameterTypes.Length; ++i)
+            }
+
+            for (int i = 0; i < parameterTypes.Length; ++i)
             {
                 if (parameterTypes[i] != methodParameterTypes[i])
+                {
                     throw new ArgumentException($"The argument #{i + 1} must be of type '{methodParameterTypes[i]}'", "method");
+                }
             }
             Emit(OpCodes.Jmp, method);
         }
@@ -489,7 +589,10 @@ namespace GrEmit
         public void Br(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Br, label);
             stack = null;
         }
@@ -503,7 +606,10 @@ namespace GrEmit
         public void Brfalse(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Brfalse, label);
         }
 
@@ -516,7 +622,10 @@ namespace GrEmit
         public void Brtrue(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Brtrue, label);
         }
 
@@ -534,7 +643,10 @@ namespace GrEmit
         public void Ble(Label label, bool unsigned)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(unsigned ? OpCodes.Ble_Un : OpCodes.Ble, label);
         }
 
@@ -552,7 +664,10 @@ namespace GrEmit
         public void Bge(Label label, bool unsigned)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(unsigned ? OpCodes.Bge_Un : OpCodes.Bge, label);
         }
 
@@ -570,7 +685,10 @@ namespace GrEmit
         public void Blt(Label label, bool unsigned)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(unsigned ? OpCodes.Blt_Un : OpCodes.Blt, label);
         }
 
@@ -588,7 +706,10 @@ namespace GrEmit
         public void Bgt(Label label, bool unsigned)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(unsigned ? OpCodes.Bgt_Un : OpCodes.Bgt, label);
         }
 
@@ -601,7 +722,10 @@ namespace GrEmit
         public void Bne_Un(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Bne_Un, label);
         }
 
@@ -614,7 +738,10 @@ namespace GrEmit
         public void Beq(Label label)
         {
             if (label == null)
+            {
                 throw new ArgumentNullException("label");
+            }
+
             Emit(OpCodes.Beq, label);
         }
 
@@ -718,9 +845,15 @@ namespace GrEmit
         public void Initobj(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             Emit(OpCodes.Initobj, type);
         }
 
@@ -735,9 +868,15 @@ namespace GrEmit
         public void Cpobj(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             Emit(OpCodes.Cpobj, type);
         }
 
@@ -755,30 +894,40 @@ namespace GrEmit
         public void Ldarg(int index)
         {
             if (index < 0)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be less than zero");
+            }
+
             if (index >= methodParameterTypes.Length)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be greater than or equal to the number of parameters of the method being emitted");
+            }
 
             switch (index)
             {
-            case 0:
-                Emit(OpCodes.Ldarg_0);
-                break;
-            case 1:
-                Emit(OpCodes.Ldarg_1);
-                break;
-            case 2:
-                Emit(OpCodes.Ldarg_2);
-                break;
-            case 3:
-                Emit(OpCodes.Ldarg_3);
-                break;
-            default:
-                if (index < 256)
-                    Emit(OpCodes.Ldarg_S, (byte)index);
-                else
-                    Emit(OpCodes.Ldarg, index);
-                break;
+                case 0:
+                    Emit(OpCodes.Ldarg_0);
+                    break;
+                case 1:
+                    Emit(OpCodes.Ldarg_1);
+                    break;
+                case 2:
+                    Emit(OpCodes.Ldarg_2);
+                    break;
+                case 3:
+                    Emit(OpCodes.Ldarg_3);
+                    break;
+                default:
+                    if (index < 256)
+                    {
+                        Emit(OpCodes.Ldarg_S, (byte)index);
+                    }
+                    else
+                    {
+                        Emit(OpCodes.Ldarg, index);
+                    }
+
+                    break;
             }
         }
 
@@ -793,13 +942,23 @@ namespace GrEmit
         public void Starg(int index)
         {
             if (index < 0)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be less than zero");
+            }
+
             if (index >= methodParameterTypes.Length)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be greater than or equal to the number of parameters of the method being emitted");
+            }
+
             if (index < 256)
+            {
                 Emit(OpCodes.Starg_S, (byte)index);
+            }
             else
+            {
                 Emit(OpCodes.Starg, index);
+            }
         }
 
         /// <summary>
@@ -813,13 +972,23 @@ namespace GrEmit
         public void Ldarga(int index)
         {
             if (index < 0)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be less than zero");
+            }
+
             if (index >= methodParameterTypes.Length)
+            {
                 throw new ArgumentOutOfRangeException("index", "Argument index cannot be greater than or equal to the number of parameters of the method being emitted");
+            }
+
             if (index < 256)
+            {
                 Emit(OpCodes.Ldarga_S, (byte)index);
+            }
             else
+            {
                 Emit(OpCodes.Ldarga, index);
+            }
         }
 
         /// <summary>
@@ -846,42 +1015,47 @@ namespace GrEmit
         {
             switch (value)
             {
-            case 0:
-                Emit(OpCodes.Ldc_I4_0);
-                break;
-            case 1:
-                Emit(OpCodes.Ldc_I4_1);
-                break;
-            case 2:
-                Emit(OpCodes.Ldc_I4_2);
-                break;
-            case 3:
-                Emit(OpCodes.Ldc_I4_3);
-                break;
-            case 4:
-                Emit(OpCodes.Ldc_I4_4);
-                break;
-            case 5:
-                Emit(OpCodes.Ldc_I4_5);
-                break;
-            case 6:
-                Emit(OpCodes.Ldc_I4_6);
-                break;
-            case 7:
-                Emit(OpCodes.Ldc_I4_7);
-                break;
-            case 8:
-                Emit(OpCodes.Ldc_I4_8);
-                break;
-            case -1:
-                Emit(OpCodes.Ldc_I4_M1);
-                break;
-            default:
-                if (value < 128 && value >= -128)
-                    Emit(OpCodes.Ldc_I4_S, (sbyte)value);
-                else
-                    Emit(OpCodes.Ldc_I4, value);
-                break;
+                case 0:
+                    Emit(OpCodes.Ldc_I4_0);
+                    break;
+                case 1:
+                    Emit(OpCodes.Ldc_I4_1);
+                    break;
+                case 2:
+                    Emit(OpCodes.Ldc_I4_2);
+                    break;
+                case 3:
+                    Emit(OpCodes.Ldc_I4_3);
+                    break;
+                case 4:
+                    Emit(OpCodes.Ldc_I4_4);
+                    break;
+                case 5:
+                    Emit(OpCodes.Ldc_I4_5);
+                    break;
+                case 6:
+                    Emit(OpCodes.Ldc_I4_6);
+                    break;
+                case 7:
+                    Emit(OpCodes.Ldc_I4_7);
+                    break;
+                case 8:
+                    Emit(OpCodes.Ldc_I4_8);
+                    break;
+                case -1:
+                    Emit(OpCodes.Ldc_I4_M1);
+                    break;
+                default:
+                    if (value < 128 && value >= -128)
+                    {
+                        Emit(OpCodes.Ldc_I4_S, (sbyte)value);
+                    }
+                    else
+                    {
+                        Emit(OpCodes.Ldc_I4, value);
+                    }
+
+                    break;
             }
         }
 
@@ -919,9 +1093,14 @@ namespace GrEmit
         public void Ldc_IntPtr(IntPtr value)
         {
             if (IntPtr.Size == 4)
+            {
                 Ldc_I4(value.ToInt32());
+            }
             else
+            {
                 Ldc_I8(value.ToInt64());
+            }
+
             Conv<IntPtr>();
         }
 
@@ -943,7 +1122,7 @@ namespace GrEmit
             }
             else
             {
-                var prevVerificationKind = VerificationKind;
+                TypesAssignabilityVerificationKind prevVerificationKind = VerificationKind;
                 VerificationKind = TypesAssignabilityVerificationKind.LowLevelOnly;
                 Ldc_I4(0);
                 Conv<UIntPtr>();
@@ -967,7 +1146,10 @@ namespace GrEmit
         public void Ldftn(MethodInfo method)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
+            }
+
             Emit(OpCodes.Ldftn, method);
         }
 
@@ -978,7 +1160,10 @@ namespace GrEmit
         public void Ldvirtftn(MethodInfo method)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
+            }
+
             Emit(OpCodes.Ldvirtftn, method);
         }
 
@@ -995,9 +1180,15 @@ namespace GrEmit
         public void Stfld(FieldInfo field, bool isVolatile = false, int? unaligned = null)
         {
             if (field == null)
+            {
                 throw new ArgumentNullException("field");
+            }
+
             if (field.IsStatic && unaligned != null)
+            {
                 throw new ArgumentException("Static fields are always aligned to the natural size", "unaligned");
+            }
+
             InsertPrefixes(isVolatile, unaligned);
             Emit(field.IsStatic ? OpCodes.Stsfld : OpCodes.Stfld, field);
         }
@@ -1015,9 +1206,15 @@ namespace GrEmit
         public void Ldfld(FieldInfo field, bool isVolatile = false, int? unaligned = null)
         {
             if (field == null)
+            {
                 throw new ArgumentNullException("field");
+            }
+
             if (field.IsStatic && unaligned != null)
+            {
                 throw new ArgumentException("Static fields are always aligned to the natural size", "unaligned");
+            }
+
             InsertPrefixes(isVolatile, unaligned);
             Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
         }
@@ -1033,7 +1230,10 @@ namespace GrEmit
         public void Ldflda(FieldInfo field)
         {
             if (field == null)
+            {
                 throw new ArgumentNullException("field");
+            }
+
             Emit(field.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda, field);
         }
 
@@ -1047,13 +1247,21 @@ namespace GrEmit
         public void Ldelema(Type elementType, bool asReadonly = false)
         {
             if (elementType == null)
+            {
                 throw new ArgumentNullException("elementType");
+            }
+
             if (asReadonly)
             {
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Readonly, null);
+                }
+
                 if (symbolDocumentWriter == null)
+                {
                     il.Emit(OpCodes.Readonly);
+                }
             }
             Emit(OpCodes.Ldelema, elementType);
         }
@@ -1075,7 +1283,10 @@ namespace GrEmit
         public void Ldelem(Type elementType)
         {
             if (elementType == null)
+            {
                 throw new ArgumentNullException("elementType");
+            }
+
             if (IsStruct(elementType))
             {
                 // struct
@@ -1083,48 +1294,52 @@ namespace GrEmit
                 Ldobj(elementType);
                 return;
             }
-            var parameter = new TypeILInstructionParameter(elementType);
+            TypeILInstructionParameter parameter = new TypeILInstructionParameter(elementType);
             if (!elementType.IsValueType) // class
+            {
                 Emit(OpCodes.Ldelem_Ref, parameter);
+            }
             else if (elementType == typeof(IntPtr) || elementType == typeof(UIntPtr))
+            {
                 Emit(OpCodes.Ldelem_I, parameter);
+            }
             else
             {
                 // Primitive
                 switch (Type.GetTypeCode(elementType))
                 {
-                case TypeCode.Boolean:
-                case TypeCode.SByte:
-                    Emit(OpCodes.Ldelem_I1, parameter);
-                    break;
-                case TypeCode.Byte:
-                    Emit(OpCodes.Ldelem_U1, parameter);
-                    break;
-                case TypeCode.Int16:
-                    Emit(OpCodes.Ldelem_I2, parameter);
-                    break;
-                case TypeCode.Int32:
-                    Emit(OpCodes.Ldelem_I4, parameter);
-                    break;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    Emit(OpCodes.Ldelem_I8, parameter);
-                    break;
-                case TypeCode.Char:
-                case TypeCode.UInt16:
-                    Emit(OpCodes.Ldelem_U2, parameter);
-                    break;
-                case TypeCode.UInt32:
-                    Emit(OpCodes.Ldelem_U4, parameter);
-                    break;
-                case TypeCode.Single:
-                    Emit(OpCodes.Ldelem_R4, parameter);
-                    break;
-                case TypeCode.Double:
-                    Emit(OpCodes.Ldelem_R8, parameter);
-                    break;
-                default:
-                    throw new NotSupportedException("Type '" + elementType.Name + "' is not supported");
+                    case TypeCode.Boolean:
+                    case TypeCode.SByte:
+                        Emit(OpCodes.Ldelem_I1, parameter);
+                        break;
+                    case TypeCode.Byte:
+                        Emit(OpCodes.Ldelem_U1, parameter);
+                        break;
+                    case TypeCode.Int16:
+                        Emit(OpCodes.Ldelem_I2, parameter);
+                        break;
+                    case TypeCode.Int32:
+                        Emit(OpCodes.Ldelem_I4, parameter);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        Emit(OpCodes.Ldelem_I8, parameter);
+                        break;
+                    case TypeCode.Char:
+                    case TypeCode.UInt16:
+                        Emit(OpCodes.Ldelem_U2, parameter);
+                        break;
+                    case TypeCode.UInt32:
+                        Emit(OpCodes.Ldelem_U4, parameter);
+                        break;
+                    case TypeCode.Single:
+                        Emit(OpCodes.Ldelem_R4, parameter);
+                        break;
+                    case TypeCode.Double:
+                        Emit(OpCodes.Ldelem_R8, parameter);
+                        break;
+                    default:
+                        throw new NotSupportedException("Type '" + elementType.Name + "' is not supported");
                 }
             }
         }
@@ -1145,46 +1360,55 @@ namespace GrEmit
         public void Stelem(Type elementType)
         {
             if (elementType == null)
+            {
                 throw new ArgumentNullException("elementType");
-            if (IsStruct(elementType))
-                throw new InvalidOperationException("To store an item to an array of structs use Ldelema & Stobj instructions");
+            }
 
-            var parameter = new TypeILInstructionParameter(elementType);
+            if (IsStruct(elementType))
+            {
+                throw new InvalidOperationException("To store an item to an array of structs use Ldelema & Stobj instructions");
+            }
+
+            TypeILInstructionParameter parameter = new TypeILInstructionParameter(elementType);
             if (!elementType.IsValueType) // class
+            {
                 Emit(OpCodes.Stelem_Ref, parameter);
+            }
             else if (elementType == typeof(IntPtr) || elementType == typeof(UIntPtr))
+            {
                 Emit(OpCodes.Stelem_I, parameter);
+            }
             else
             {
                 // Primitive
                 switch (Type.GetTypeCode(elementType))
                 {
-                case TypeCode.Boolean:
-                case TypeCode.SByte:
-                case TypeCode.Byte:
-                    Emit(OpCodes.Stelem_I1, parameter);
-                    break;
-                case TypeCode.Char:
-                case TypeCode.UInt16:
-                case TypeCode.Int16:
-                    Emit(OpCodes.Stelem_I2, parameter);
-                    break;
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                    Emit(OpCodes.Stelem_I4, parameter);
-                    break;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    Emit(OpCodes.Stelem_I8, parameter);
-                    break;
-                case TypeCode.Single:
-                    Emit(OpCodes.Stelem_R4, parameter);
-                    break;
-                case TypeCode.Double:
-                    Emit(OpCodes.Stelem_R8, parameter);
-                    break;
-                default:
-                    throw new NotSupportedException("Type '" + elementType.Name + "' is not supported");
+                    case TypeCode.Boolean:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                        Emit(OpCodes.Stelem_I1, parameter);
+                        break;
+                    case TypeCode.Char:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int16:
+                        Emit(OpCodes.Stelem_I2, parameter);
+                        break;
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                        Emit(OpCodes.Stelem_I4, parameter);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        Emit(OpCodes.Stelem_I8, parameter);
+                        break;
+                    case TypeCode.Single:
+                        Emit(OpCodes.Stelem_R4, parameter);
+                        break;
+                    case TypeCode.Double:
+                        Emit(OpCodes.Stelem_R8, parameter);
+                        break;
+                    default:
+                        throw new NotSupportedException("Type '" + elementType.Name + "' is not supported");
                 }
             }
         }
@@ -1207,7 +1431,10 @@ namespace GrEmit
         public void Stind(Type type, bool isVolatile = false, int? unaligned = null)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (IsStruct(type))
             {
                 Stobj(type, isVolatile, unaligned);
@@ -1216,40 +1443,42 @@ namespace GrEmit
 
             InsertPrefixes(isVolatile, unaligned);
 
-            var parameter = new TypeILInstructionParameter(type);
+            TypeILInstructionParameter parameter = new TypeILInstructionParameter(type);
             if (!type.IsValueType) // class
+            {
                 Emit(OpCodes.Stind_Ref, parameter);
+            }
             else
             {
                 // Primitive
                 switch (Type.GetTypeCode(type))
                 {
-                case TypeCode.Boolean:
-                case TypeCode.SByte:
-                case TypeCode.Byte:
-                    Emit(OpCodes.Stind_I1, parameter);
-                    break;
-                case TypeCode.Int16:
-                case TypeCode.Char:
-                case TypeCode.UInt16:
-                    Emit(OpCodes.Stind_I2, parameter);
-                    break;
-                case TypeCode.Int32:
-                case TypeCode.UInt32:
-                    Emit(OpCodes.Stind_I4, parameter);
-                    break;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    Emit(OpCodes.Stind_I8, parameter);
-                    break;
-                case TypeCode.Single:
-                    Emit(OpCodes.Stind_R4, parameter);
-                    break;
-                case TypeCode.Double:
-                    Emit(OpCodes.Stind_R8, parameter);
-                    break;
-                default:
-                    throw new NotSupportedException("Type '" + type.Name + "' is not supported");
+                    case TypeCode.Boolean:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                        Emit(OpCodes.Stind_I1, parameter);
+                        break;
+                    case TypeCode.Int16:
+                    case TypeCode.Char:
+                    case TypeCode.UInt16:
+                        Emit(OpCodes.Stind_I2, parameter);
+                        break;
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                        Emit(OpCodes.Stind_I4, parameter);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        Emit(OpCodes.Stind_I8, parameter);
+                        break;
+                    case TypeCode.Single:
+                        Emit(OpCodes.Stind_R4, parameter);
+                        break;
+                    case TypeCode.Double:
+                        Emit(OpCodes.Stind_R8, parameter);
+                        break;
+                    default:
+                        throw new NotSupportedException("Type '" + type.Name + "' is not supported");
                 }
             }
         }
@@ -1273,7 +1502,10 @@ namespace GrEmit
         public void Ldind(Type type, bool isVolatile = false, int? unaligned = null)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (IsStruct(type))
             {
                 Ldobj(type, isVolatile, unaligned);
@@ -1282,45 +1514,47 @@ namespace GrEmit
 
             InsertPrefixes(isVolatile, unaligned);
 
-            var parameter = new TypeILInstructionParameter(type);
+            TypeILInstructionParameter parameter = new TypeILInstructionParameter(type);
             if (!type.IsValueType) // class
+            {
                 Emit(OpCodes.Ldind_Ref, parameter);
+            }
             else
             {
                 switch (Type.GetTypeCode(type))
                 {
-                case TypeCode.SByte:
-                    Emit(OpCodes.Ldind_I1, parameter);
-                    break;
-                case TypeCode.Byte:
-                case TypeCode.Boolean:
-                    Emit(OpCodes.Ldind_U1, parameter);
-                    break;
-                case TypeCode.Int16:
-                    Emit(OpCodes.Ldind_I2, parameter);
-                    break;
-                case TypeCode.Char:
-                case TypeCode.UInt16:
-                    Emit(OpCodes.Ldind_U2, parameter);
-                    break;
-                case TypeCode.Int32:
-                    Emit(OpCodes.Ldind_I4, parameter);
-                    break;
-                case TypeCode.UInt32:
-                    Emit(OpCodes.Ldind_U4, parameter);
-                    break;
-                case TypeCode.Int64:
-                case TypeCode.UInt64:
-                    Emit(OpCodes.Ldind_I8, parameter);
-                    break;
-                case TypeCode.Single:
-                    Emit(OpCodes.Ldind_R4, parameter);
-                    break;
-                case TypeCode.Double:
-                    Emit(OpCodes.Ldind_R8, parameter);
-                    break;
-                default:
-                    throw new NotSupportedException("Type '" + type.Name + "' is not supported");
+                    case TypeCode.SByte:
+                        Emit(OpCodes.Ldind_I1, parameter);
+                        break;
+                    case TypeCode.Byte:
+                    case TypeCode.Boolean:
+                        Emit(OpCodes.Ldind_U1, parameter);
+                        break;
+                    case TypeCode.Int16:
+                        Emit(OpCodes.Ldind_I2, parameter);
+                        break;
+                    case TypeCode.Char:
+                    case TypeCode.UInt16:
+                        Emit(OpCodes.Ldind_U2, parameter);
+                        break;
+                    case TypeCode.Int32:
+                        Emit(OpCodes.Ldind_I4, parameter);
+                        break;
+                    case TypeCode.UInt32:
+                        Emit(OpCodes.Ldind_U4, parameter);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        Emit(OpCodes.Ldind_I8, parameter);
+                        break;
+                    case TypeCode.Single:
+                        Emit(OpCodes.Ldind_R4, parameter);
+                        break;
+                    case TypeCode.Double:
+                        Emit(OpCodes.Ldind_R8, parameter);
+                        break;
+                    default:
+                        throw new NotSupportedException("Type '" + type.Name + "' is not supported");
                 }
             }
         }
@@ -1360,7 +1594,10 @@ namespace GrEmit
         public void Ldtoken(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             Emit(OpCodes.Ldtoken, type);
         }
 
@@ -1373,7 +1610,10 @@ namespace GrEmit
         public void Ldtoken(MethodInfo method)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
+            }
+
             Emit(OpCodes.Ldtoken, method);
         }
 
@@ -1386,7 +1626,10 @@ namespace GrEmit
         public void Ldtoken(FieldInfo field)
         {
             if (field == null)
+            {
                 throw new ArgumentNullException("field");
+            }
+
             Emit(OpCodes.Ldtoken, field);
         }
 
@@ -1399,9 +1642,15 @@ namespace GrEmit
         public void Castclass(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (type.IsValueType)
+            {
                 throw new ArgumentException("A reference type expected", "type");
+            }
+
             Emit(OpCodes.Castclass, type);
         }
 
@@ -1414,7 +1663,10 @@ namespace GrEmit
         public void Isinst(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             Emit(OpCodes.Isinst, type);
         }
 
@@ -1427,9 +1679,15 @@ namespace GrEmit
         public void Unbox_Any(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType && !type.IsGenericParameter)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             Emit(OpCodes.Unbox_Any, type);
         }
 
@@ -1442,9 +1700,15 @@ namespace GrEmit
         public void Box(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType && !type.IsGenericParameter)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             Emit(OpCodes.Box, type);
         }
 
@@ -1459,9 +1723,15 @@ namespace GrEmit
         public void Stobj(Type type, bool isVolatile = false, int? unaligned = null)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             InsertPrefixes(isVolatile, unaligned);
             Emit(OpCodes.Stobj, type);
         }
@@ -1477,9 +1747,15 @@ namespace GrEmit
         public void Ldobj(Type type, bool isVolatile = false, int? unaligned = null)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             if (!type.IsValueType)
+            {
                 throw new ArgumentException("A value type expected", "type");
+            }
+
             InsertPrefixes(isVolatile, unaligned);
             Emit(OpCodes.Ldobj, type);
         }
@@ -1493,7 +1769,10 @@ namespace GrEmit
         public void Newobj(ConstructorInfo constructor)
         {
             if (constructor == null)
+            {
                 throw new ArgumentNullException("constructor");
+            }
+
             Emit(OpCodes.Newobj, constructor);
         }
 
@@ -1506,7 +1785,10 @@ namespace GrEmit
         public void Newarr(Type type)
         {
             if (type == null)
+            {
                 throw new ArgumentNullException("type");
+            }
+
             Emit(OpCodes.Newarr, type);
         }
 
@@ -1675,7 +1957,10 @@ namespace GrEmit
         public void Ldstr(string value)
         {
             if (value == null)
+            {
                 throw new ArgumentNullException("value");
+            }
+
             Emit(OpCodes.Ldstr, value);
         }
 
@@ -1685,12 +1970,12 @@ namespace GrEmit
         /// <param name="value">The value to push.</param>
         public void LdDec(decimal value)
         {
-            var bits = decimal.GetBits(value);
+            int[] bits = decimal.GetBits(value);
 
             Ldc_I4(4);
             Newarr(typeof(int));
 
-            for (var i = 0; i < 4; ++i)
+            for (int i = 0; i < 4; ++i)
             {
                 Dup();
                 Ldc_I4(i);
@@ -1698,7 +1983,7 @@ namespace GrEmit
                 Stelem(typeof(int));
             }
 
-            Newobj(typeof(decimal).GetConstructor(new[] {typeof(int[])}));
+            Newobj(typeof(decimal).GetConstructor(new[] { typeof(int[]) }));
         }
 
         /// <summary>
@@ -1717,48 +2002,52 @@ namespace GrEmit
         /// </typeparam>
         public void Conv<T>()
         {
-            var type = typeof(T);
+            Type type = typeof(T);
             OpCode opCode;
             if (type == typeof(IntPtr))
+            {
                 opCode = OpCodes.Conv_I;
+            }
             else if (type == typeof(UIntPtr))
+            {
                 opCode = OpCodes.Conv_U;
+            }
             else
             {
                 switch (Type.GetTypeCode(type))
                 {
-                case TypeCode.SByte:
-                    opCode = OpCodes.Conv_I1;
-                    break;
-                case TypeCode.Byte:
-                    opCode = OpCodes.Conv_U1;
-                    break;
-                case TypeCode.Int16:
-                    opCode = OpCodes.Conv_I2;
-                    break;
-                case TypeCode.UInt16:
-                    opCode = OpCodes.Conv_U2;
-                    break;
-                case TypeCode.Int32:
-                    opCode = OpCodes.Conv_I4;
-                    break;
-                case TypeCode.UInt32:
-                    opCode = OpCodes.Conv_U4;
-                    break;
-                case TypeCode.Int64:
-                    opCode = OpCodes.Conv_I8;
-                    break;
-                case TypeCode.UInt64:
-                    opCode = OpCodes.Conv_U8;
-                    break;
-                case TypeCode.Single:
-                    opCode = OpCodes.Conv_R4;
-                    break;
-                case TypeCode.Double:
-                    opCode = OpCodes.Conv_R8;
-                    break;
-                default:
-                    throw new ArgumentException($"Expected numeric type but was '{type}'", "type");
+                    case TypeCode.SByte:
+                        opCode = OpCodes.Conv_I1;
+                        break;
+                    case TypeCode.Byte:
+                        opCode = OpCodes.Conv_U1;
+                        break;
+                    case TypeCode.Int16:
+                        opCode = OpCodes.Conv_I2;
+                        break;
+                    case TypeCode.UInt16:
+                        opCode = OpCodes.Conv_U2;
+                        break;
+                    case TypeCode.Int32:
+                        opCode = OpCodes.Conv_I4;
+                        break;
+                    case TypeCode.UInt32:
+                        opCode = OpCodes.Conv_U4;
+                        break;
+                    case TypeCode.Int64:
+                        opCode = OpCodes.Conv_I8;
+                        break;
+                    case TypeCode.UInt64:
+                        opCode = OpCodes.Conv_U8;
+                        break;
+                    case TypeCode.Single:
+                        opCode = OpCodes.Conv_R4;
+                        break;
+                    case TypeCode.Double:
+                        opCode = OpCodes.Conv_R8;
+                        break;
+                    default:
+                        throw new ArgumentException($"Expected numeric type but was '{type}'", "type");
                 }
             }
             Emit(opCode);
@@ -1793,83 +2082,91 @@ namespace GrEmit
         /// </typeparam>
         public void Conv_Ovf<T>(bool unsigned)
         {
-            var type = typeof(T);
+            Type type = typeof(T);
             OpCode opCode;
             if (!unsigned)
             {
                 if (type == typeof(IntPtr))
+                {
                     opCode = OpCodes.Conv_Ovf_I;
+                }
                 else if (type == typeof(UIntPtr))
+                {
                     opCode = OpCodes.Conv_Ovf_U;
+                }
                 else
                 {
                     switch (Type.GetTypeCode(type))
                     {
-                    case TypeCode.SByte:
-                        opCode = OpCodes.Conv_Ovf_I1;
-                        break;
-                    case TypeCode.Byte:
-                        opCode = OpCodes.Conv_Ovf_U1;
-                        break;
-                    case TypeCode.Int16:
-                        opCode = OpCodes.Conv_Ovf_I2;
-                        break;
-                    case TypeCode.UInt16:
-                        opCode = OpCodes.Conv_Ovf_U2;
-                        break;
-                    case TypeCode.Int32:
-                        opCode = OpCodes.Conv_Ovf_I4;
-                        break;
-                    case TypeCode.UInt32:
-                        opCode = OpCodes.Conv_Ovf_U4;
-                        break;
-                    case TypeCode.Int64:
-                        opCode = OpCodes.Conv_Ovf_I8;
-                        break;
-                    case TypeCode.UInt64:
-                        opCode = OpCodes.Conv_Ovf_U8;
-                        break;
-                    default:
-                        throw new ArgumentException($"Expected integer type but was '{type}'", "T");
+                        case TypeCode.SByte:
+                            opCode = OpCodes.Conv_Ovf_I1;
+                            break;
+                        case TypeCode.Byte:
+                            opCode = OpCodes.Conv_Ovf_U1;
+                            break;
+                        case TypeCode.Int16:
+                            opCode = OpCodes.Conv_Ovf_I2;
+                            break;
+                        case TypeCode.UInt16:
+                            opCode = OpCodes.Conv_Ovf_U2;
+                            break;
+                        case TypeCode.Int32:
+                            opCode = OpCodes.Conv_Ovf_I4;
+                            break;
+                        case TypeCode.UInt32:
+                            opCode = OpCodes.Conv_Ovf_U4;
+                            break;
+                        case TypeCode.Int64:
+                            opCode = OpCodes.Conv_Ovf_I8;
+                            break;
+                        case TypeCode.UInt64:
+                            opCode = OpCodes.Conv_Ovf_U8;
+                            break;
+                        default:
+                            throw new ArgumentException($"Expected integer type but was '{type}'", "T");
                     }
                 }
             }
             else
             {
                 if (type == typeof(IntPtr))
+                {
                     opCode = OpCodes.Conv_Ovf_I_Un;
+                }
                 else if (type == typeof(UIntPtr))
+                {
                     opCode = OpCodes.Conv_Ovf_U_Un;
+                }
                 else
                 {
                     switch (Type.GetTypeCode(type))
                     {
-                    case TypeCode.SByte:
-                        opCode = OpCodes.Conv_Ovf_I1_Un;
-                        break;
-                    case TypeCode.Byte:
-                        opCode = OpCodes.Conv_Ovf_U1_Un;
-                        break;
-                    case TypeCode.Int16:
-                        opCode = OpCodes.Conv_Ovf_I2_Un;
-                        break;
-                    case TypeCode.UInt16:
-                        opCode = OpCodes.Conv_Ovf_U2_Un;
-                        break;
-                    case TypeCode.Int32:
-                        opCode = OpCodes.Conv_Ovf_I4_Un;
-                        break;
-                    case TypeCode.UInt32:
-                        opCode = OpCodes.Conv_Ovf_U4_Un;
-                        break;
-                    case TypeCode.Int64:
-                        opCode = OpCodes.Conv_Ovf_I8_Un;
-                        break;
-                    case TypeCode.UInt64:
-                        opCode = OpCodes.Conv_Ovf_U8_Un;
-                        break;
-                    default:
-                        throw new ArgumentException($"Expected integer type but was '{type}'", "T");
+                        case TypeCode.SByte:
+                            opCode = OpCodes.Conv_Ovf_I1_Un;
+                            break;
+                        case TypeCode.Byte:
+                            opCode = OpCodes.Conv_Ovf_U1_Un;
+                            break;
+                        case TypeCode.Int16:
+                            opCode = OpCodes.Conv_Ovf_I2_Un;
+                            break;
+                        case TypeCode.UInt16:
+                            opCode = OpCodes.Conv_Ovf_U2_Un;
+                            break;
+                        case TypeCode.Int32:
+                            opCode = OpCodes.Conv_Ovf_I4_Un;
+                            break;
+                        case TypeCode.UInt32:
+                            opCode = OpCodes.Conv_Ovf_U4_Un;
+                            break;
+                        case TypeCode.Int64:
+                            opCode = OpCodes.Conv_Ovf_I8_Un;
+                            break;
+                        case TypeCode.UInt64:
+                            opCode = OpCodes.Conv_Ovf_U8_Un;
+                            break;
+                        default:
+                            throw new ArgumentException($"Expected integer type but was '{type}'", "T");
                     }
                 }
             }
@@ -1895,34 +2192,55 @@ namespace GrEmit
         public void Call(MethodInfo method, Type constrained = null, bool tailcall = false, Type[] optionalParameterTypes = null, bool isVirtual = false)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
-            var opCode = method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call;
+            }
+
+            OpCode opCode = method.IsVirtual ? OpCodes.Callvirt : OpCodes.Call;
             if (isVirtual)
+            {
                 opCode = OpCodes.Callvirt;
+            }
+
             if (opCode == OpCodes.Callvirt)
             {
                 if (constrained != null && constrained.IsValueType)
                 {
                     if (analyzeStack)
+                    {
                         ilCode.AppendPrefix(OpCodes.Constrained, new TypeILInstructionParameter(constrained));
+                    }
+
                     if (symbolDocumentWriter == null)
+                    {
                         il.Emit(OpCodes.Constrained, constrained);
+                    }
                 }
             }
             if (tailcall)
             {
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Tailcall, null);
+                }
+
                 if (symbolDocumentWriter == null)
+                {
                     il.Emit(OpCodes.Tailcall);
+                }
             }
-            var parameter = new CallILInstructionParameter(method, constrained);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            CallILInstructionParameter parameter = new CallILInstructionParameter(method, constrained);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitCall(opCode, method, optionalParameterTypes);
+            }
         }
 
         /// <summary>
@@ -1934,14 +2252,22 @@ namespace GrEmit
         public void Call(ConstructorInfo constructor)
         {
             if (constructor == null)
+            {
                 throw new ArgumentNullException("constructor");
-            var parameter = new ConstructorILInstructionParameter(constructor);
-            var lineNumber = ilCode.Append(OpCodes.Call, parameter, new EmptyILInstructionComment());
+            }
+
+            ConstructorILInstructionParameter parameter = new ConstructorILInstructionParameter(constructor);
+            int lineNumber = ilCode.Append(OpCodes.Call, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(OpCodes.Call, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(OpCodes.Call, constructor);
+            }
         }
 
         /// <summary>
@@ -1957,22 +2283,35 @@ namespace GrEmit
         public void Callnonvirt(MethodInfo method, bool tailcall = false, Type[] optionalParameterTypes = null)
         {
             if (method == null)
+            {
                 throw new ArgumentNullException("method");
+            }
+
             if (tailcall)
             {
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Tailcall, null);
+                }
+
                 if (symbolDocumentWriter == null)
+                {
                     il.Emit(OpCodes.Tailcall);
+                }
             }
-            var opCode = OpCodes.Call;
-            var parameter = new MethodILInstructionParameter(method);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            OpCode opCode = OpCodes.Call;
+            MethodILInstructionParameter parameter = new MethodILInstructionParameter(method);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitCall(opCode, method, optionalParameterTypes);
+            }
         }
 
         /// <summary>
@@ -1992,17 +2331,27 @@ namespace GrEmit
             if (tailcall)
             {
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Tailcall, null);
+                }
+
                 if (symbolDocumentWriter == null)
+                {
                     il.Emit(OpCodes.Tailcall);
+                }
             }
-            var parameter = new MethodByAddressILInstructionParameter(callingConvention, returnType, parameterTypes);
-            var lineNumber = ilCode.Append(OpCodes.Calli, parameter, new EmptyILInstructionComment());
+            MethodByAddressILInstructionParameter parameter = new MethodByAddressILInstructionParameter(callingConvention, returnType, parameterTypes);
+            int lineNumber = ilCode.Append(OpCodes.Calli, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(OpCodes.Calli, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitCalli(OpCodes.Calli, callingConvention, returnType, parameterTypes, optionalParameterTypes);
+            }
         }
 
         /// <summary>
@@ -2016,13 +2365,18 @@ namespace GrEmit
         public void Calli(CallingConvention callingConvention, Type returnType, Type[] parameterTypes)
         {
 #if !NETSTANDARD2_0 // see https://apisof.net/catalog/System.Reflection.Emit.ILGenerator.EmitCalli(OpCode,CallingConvention,Type,Type())
-            var parameter = new MethodByAddressILInstructionParameter(callingConvention, returnType, parameterTypes);
-            var lineNumber = ilCode.Append(OpCodes.Calli, parameter, new EmptyILInstructionComment());
+            MethodByAddressILInstructionParameter parameter = new MethodByAddressILInstructionParameter(callingConvention, returnType, parameterTypes);
+            int lineNumber = ilCode.Append(OpCodes.Calli, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(OpCodes.Calli, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.EmitCalli(OpCodes.Calli, callingConvention, returnType, parameterTypes);
+            }
 #else
             throw new PlatformNotSupportedException("Unmanaged function call is not supported for netstandard2.0 target. See https://apisof.net/catalog/System.Reflection.Emit.ILGenerator.EmitCalli(OpCode,CallingConvention,Type,Type())");
 #endif
@@ -2031,28 +2385,48 @@ namespace GrEmit
         private void Emit(OpCode opCode, ILInstructionParameter parameter)
         {
             if (parameter == null)
+            {
                 il.Emit(opCode);
+            }
             else if (parameter is TypeILInstructionParameter)
+            {
                 il.Emit(opCode, ((TypeILInstructionParameter)parameter).Type);
+            }
             else if (parameter is ConstructorILInstructionParameter)
+            {
                 il.Emit(opCode, ((ConstructorILInstructionParameter)parameter).Constructor);
+            }
             else if (parameter is FieldILInstructionParameter)
+            {
                 il.Emit(opCode, ((FieldILInstructionParameter)parameter).Field);
+            }
             else if (parameter is LabelILInstructionParameter)
+            {
                 il.Emit(opCode, ((LabelILInstructionParameter)parameter).Label);
+            }
             else if (parameter is LocalILInstructionParameter)
+            {
                 il.Emit(opCode, ((LocalILInstructionParameter)parameter).Local);
+            }
             else if (parameter is LabelsILInstructionParameter)
+            {
                 il.Emit(opCode, ((LabelsILInstructionParameter)parameter).Labels.Select(label => (System.Reflection.Emit.Label)label).ToArray());
+            }
             else if (parameter is MethodILInstructionParameter)
+            {
                 il.EmitCall(opCode, ((MethodILInstructionParameter)parameter).Method, null);
+            }
             else if (parameter is StringILInstructionParameter)
+            {
                 il.Emit(opCode, ((StringILInstructionParameter)parameter).Value);
+            }
             else if (parameter is MethodByAddressILInstructionParameter)
             {
-                var calliParameter = (MethodByAddressILInstructionParameter)parameter;
+                MethodByAddressILInstructionParameter calliParameter = (MethodByAddressILInstructionParameter)parameter;
                 if (calliParameter.ManagedCallingConvention != null)
+                {
                     il.EmitCalli(opCode, calliParameter.ManagedCallingConvention.Value, calliParameter.ReturnType, calliParameter.ParameterTypes, null);
+                }
                 else
                 {
 #if !NETSTANDARD2_0 // see https://apisof.net/catalog/System.Reflection.Emit.ILGenerator.EmitCalli(OpCode,CallingConvention,Type,Type())
@@ -2064,33 +2438,33 @@ namespace GrEmit
             }
             else
             {
-                var primitiveParameter = (PrimitiveILInstructionParameter)parameter;
-                var typeCode = Type.GetTypeCode(primitiveParameter.Value.GetType());
+                PrimitiveILInstructionParameter primitiveParameter = (PrimitiveILInstructionParameter)parameter;
+                TypeCode typeCode = Type.GetTypeCode(primitiveParameter.Value.GetType());
                 switch (typeCode)
                 {
-                case TypeCode.SByte:
-                    il.Emit(opCode, (sbyte)primitiveParameter.Value);
-                    break;
-                case TypeCode.Byte:
-                    il.Emit(opCode, (byte)primitiveParameter.Value);
-                    break;
-                case TypeCode.Int16:
-                    il.Emit(opCode, (short)primitiveParameter.Value);
-                    break;
-                case TypeCode.Int32:
-                    il.Emit(opCode, (int)primitiveParameter.Value);
-                    break;
-                case TypeCode.Int64:
-                    il.Emit(opCode, (long)primitiveParameter.Value);
-                    break;
-                case TypeCode.Double:
-                    il.Emit(opCode, (double)primitiveParameter.Value);
-                    break;
-                case TypeCode.Single:
-                    il.Emit(opCode, (float)primitiveParameter.Value);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Type code '{typeCode}' is not valid at this point");
+                    case TypeCode.SByte:
+                        il.Emit(opCode, (sbyte)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Byte:
+                        il.Emit(opCode, (byte)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Int16:
+                        il.Emit(opCode, (short)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Int32:
+                        il.Emit(opCode, (int)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Int64:
+                        il.Emit(opCode, (long)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Double:
+                        il.Emit(opCode, (double)primitiveParameter.Value);
+                        break;
+                    case TypeCode.Single:
+                        il.Emit(opCode, (float)primitiveParameter.Value);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Type code '{typeCode}' is not valid at this point");
                 }
             }
         }
@@ -2100,17 +2474,28 @@ namespace GrEmit
             if (isVolatile)
             {
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Volatile, null);
+                }
+
                 il.Emit(OpCodes.Volatile);
             }
             if (unaligned != null)
             {
                 if (unaligned != 1 && unaligned != 2 && unaligned != 4)
+                {
                     throw new ArgumentException("Value of alignment must be 1, 2 or 4.", "unaligned");
+                }
+
                 if (analyzeStack)
+                {
                     ilCode.AppendPrefix(OpCodes.Unaligned, new PrimitiveILInstructionParameter((byte)unaligned.Value));
+                }
+
                 if (symbolDocumentWriter == null)
+                {
                     il.Emit(OpCodes.Unaligned, (byte)unaligned.Value);
+                }
             }
         }
 
@@ -2131,176 +2516,256 @@ namespace GrEmit
 
         private void Emit(OpCode opCode, TypeILInstructionParameter parameter)
         {
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode);
+            }
         }
 
         private void Emit(OpCode opCode)
         {
-            var lineNumber = ilCode.Append(opCode, new EmptyILInstructionComment());
+            int lineNumber = ilCode.Append(opCode, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, null);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode);
+            }
         }
 
         private void Emit(OpCode opCode, Local local)
         {
-            var parameter = new LocalILInstructionParameter(local);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            LocalILInstructionParameter parameter = new LocalILInstructionParameter(local);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, local);
+            }
         }
 
         private void Emit(OpCode opCode, Type type)
         {
-            var parameter = new TypeILInstructionParameter(type);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            TypeILInstructionParameter parameter = new TypeILInstructionParameter(type);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, type);
+            }
         }
 
         private void Emit(OpCode opCode, byte value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, int value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, sbyte value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, long value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, double value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, float value)
         {
-            var parameter = new PrimitiveILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            PrimitiveILInstructionParameter parameter = new PrimitiveILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, string value)
         {
-            var parameter = new StringILInstructionParameter(value);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            StringILInstructionParameter parameter = new StringILInstructionParameter(value);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, value);
+            }
         }
 
         private void Emit(OpCode opCode, Label label)
         {
-            var parameter = new LabelILInstructionParameter(label);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            LabelILInstructionParameter parameter = new LabelILInstructionParameter(label);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, label);
+            }
         }
 
         private void Emit(OpCode opCode, Label[] labels)
         {
-            var parameter = new LabelsILInstructionParameter(labels);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            LabelsILInstructionParameter parameter = new LabelsILInstructionParameter(labels);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, labels.Select(label => (System.Reflection.Emit.Label)label).ToArray());
+            }
         }
 
         private void Emit(OpCode opCode, FieldInfo field)
         {
-            var parameter = new FieldILInstructionParameter(field);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            FieldILInstructionParameter parameter = new FieldILInstructionParameter(field);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, field);
+            }
         }
 
         private void Emit(OpCode opCode, MethodInfo method)
         {
-            var parameter = new MethodILInstructionParameter(method);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            MethodILInstructionParameter parameter = new MethodILInstructionParameter(method);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, method);
+            }
         }
 
         private void Emit(OpCode opCode, ConstructorInfo constructor)
         {
-            var parameter = new ConstructorILInstructionParameter(constructor);
-            var lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
+            ConstructorILInstructionParameter parameter = new ConstructorILInstructionParameter(constructor);
+            int lineNumber = ilCode.Append(opCode, parameter, new EmptyILInstructionComment());
             if (analyzeStack && stack != null)
+            {
                 MutateStack(opCode, parameter);
+            }
+
             ilCode.SetComment(lineNumber, GetComment());
             if (symbolDocumentWriter == null)
+            {
                 il.Emit(opCode, constructor);
+            }
         }
 
         public IEnumerator GetEnumerator()
@@ -2327,7 +2792,7 @@ namespace GrEmit
             public Label(System.Reflection.Emit.Label label, string name)
             {
                 this.label = label;
-                this.Name = name;
+                Name = name;
             }
 
             public static implicit operator System.Reflection.Emit.Label(Label label)
@@ -2345,7 +2810,7 @@ namespace GrEmit
             public Local(LocalBuilder localBuilder, string name)
             {
                 this.localBuilder = localBuilder;
-                this.Name = name;
+                Name = name;
             }
 
             public static implicit operator LocalBuilder(Local local)
@@ -2359,7 +2824,7 @@ namespace GrEmit
             }
 
             public string Name { get; }
-            public Type Type { get { return localBuilder.LocalType; } }
+            public Type Type => localBuilder.LocalType;
 
             public static void SetLocalSymInfo(LocalBuilder localBuilder, string name)
             {

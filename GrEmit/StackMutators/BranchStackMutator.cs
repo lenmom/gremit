@@ -1,7 +1,7 @@
+using GrEmit.InstructionParameters;
+
 using System;
 using System.Reflection.Emit;
-
-using GrEmit.InstructionParameters;
 
 namespace GrEmit.StackMutators
 {

@@ -1,6 +1,6 @@
-using System;
-
 using GrEmit.InstructionParameters;
+
+using System;
 
 namespace GrEmit.StackMutators
 {
@@ -8,10 +8,10 @@ namespace GrEmit.StackMutators
     {
         public override void Mutate(GroboIL il, ILInstructionParameter parameter, ref EvaluationStack stack)
         {
-            var method = ((MethodILInstructionParameter)parameter).Method;
+            System.Reflection.MethodInfo method = ((MethodILInstructionParameter)parameter).Method;
             CheckNotEmpty(il, stack, () => "Ldvirtftn requires an instance to be loaded onto evaluation stack");
-            var instance = stack.Pop();
-            var declaringType = method.DeclaringType;
+            ESType instance = stack.Pop();
+            Type declaringType = method.DeclaringType;
             CheckCanBeAssigned(il, declaringType, instance);
             stack.Push(typeof(IntPtr));
         }

@@ -1,8 +1,8 @@
-﻿using System;
+﻿using NUnit.Framework;
+
+using System;
 using System.Linq;
 using System.Reflection.Emit;
-
-using NUnit.Framework;
 
 namespace GrEmit.Tests.OpCodesTests
 {
@@ -395,18 +395,28 @@ namespace GrEmit.Tests.OpCodesTests
 
         private void TestSuccess(Type type1, Type type2)
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {type1, type2,}.Where(type => type != null).ToArray(), typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { type1, type2, }.Where(type => type != null).ToArray(), typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
-                var index = 0;
+                int index = 0;
                 if (type1 != null)
+                {
                     il.Ldarg(index++);
+                }
                 else
+                {
                     il.Ldnull();
+                }
+
                 if (type2 != null)
+                {
                     il.Ldarg(index++);
+                }
                 else
+                {
                     il.Ldnull();
+                }
+
                 il.Rem(false);
                 il.Pop();
                 il.Ret();
@@ -421,17 +431,27 @@ namespace GrEmit.Tests.OpCodesTests
 
         private void TestFailure(Type type1, Type type2)
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {type1, type2,}.Where(type => type != null).ToArray(), typeof(string), true);
-            var il = new GroboIL(method);
-            var index = 0;
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { type1, type2, }.Where(type => type != null).ToArray(), typeof(string), true);
+            GroboIL il = new GroboIL(method);
+            int index = 0;
             if (type1 != null)
+            {
                 il.Ldarg(index++);
+            }
             else
+            {
                 il.Ldnull();
+            }
+
             if (type2 != null)
+            {
                 il.Ldarg(index++);
+            }
             else
+            {
                 il.Ldnull();
+            }
+
             Assert.Throws<InvalidOperationException>(() => il.Rem(false));
         }
 

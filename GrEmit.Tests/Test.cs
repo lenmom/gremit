@@ -8,6 +8,7 @@ using System.Text;
 using GrEmit.Utils;
 
 using NUnit.Framework;
+
 #if NET45
 using System.Diagnostics;
 using System.Linq;
@@ -33,11 +34,11 @@ namespace GrEmit.Tests
             //     return result;
             // }
 
-            var method = new DynamicMethod(nameof(Test_LdElem_OnClass_ShouldEmitType), typeof(string), new[] {typeof(StringBuilder[])}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(nameof(Test_LdElem_OnClass_ShouldEmitType), typeof(string), new[] { typeof(StringBuilder[]) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
-                var index = il.DeclareLocal(typeof(int));
-                var result = il.DeclareLocal(typeof(string));
+                GroboIL.Local index = il.DeclareLocal(typeof(int));
+                GroboIL.Local result = il.DeclareLocal(typeof(string));
 
                 il.Ldc_I4(0);
                 il.Stloc(index);
@@ -45,8 +46,8 @@ namespace GrEmit.Tests
                 il.Ldstr(string.Empty);
                 il.Stloc(result);
 
-                var start = il.DefineLabel("start");
-                var compare = il.DefineLabel("compare");
+                GroboIL.Label start = il.DefineLabel("start");
+                GroboIL.Label compare = il.DefineLabel("compare");
 
                 il.Br(compare);
                 il.MarkLabel(start);
@@ -58,7 +59,7 @@ namespace GrEmit.Tests
                 il.Ldelem(typeof(StringBuilder));
                 il.Call(typeof(object).GetMethod(nameof(ToString)));
 
-                il.Call(typeof(string).GetMethod(nameof(string.Concat), new[] {typeof(string), typeof(string)}));
+                il.Call(typeof(string).GetMethod(nameof(string.Concat), new[] { typeof(string), typeof(string) }));
                 il.Stloc(result);
 
                 il.Ldloc(index);
@@ -77,15 +78,15 @@ namespace GrEmit.Tests
                 il.Ret();
             }
 
-            var expectedResult = "12345";
+            string expectedResult = "12345";
 
-            var funcArguments = new StringBuilder[expectedResult.Length];
-            for (var i = 0; i < expectedResult.Length; i++)
+            StringBuilder[] funcArguments = new StringBuilder[expectedResult.Length];
+            for (int i = 0; i < expectedResult.Length; i++)
             {
                 funcArguments[i] = new StringBuilder(expectedResult[i].ToString());
             }
 
-            var func = (Func<StringBuilder[], string>)method.CreateDelegate(typeof(Func<StringBuilder[], string>));
+            Func<StringBuilder[], string> func = (Func<StringBuilder[], string>)method.CreateDelegate(typeof(Func<StringBuilder[], string>));
             Assert.That(func(funcArguments), Is.EqualTo(expectedResult));
         }
 
@@ -106,25 +107,25 @@ namespace GrEmit.Tests
             //     }
             //     return sum;
             // }
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(byte)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(byte) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0); // stack: [length]
                 il.Conv<UIntPtr>();
                 il.Localloc(); // stack: [*pointer]
-                var pointer = il.DeclareLocal(typeof(UIntPtr));
+                GroboIL.Local pointer = il.DeclareLocal(typeof(UIntPtr));
                 il.Stloc(pointer); // pointer = value; stack: []
 
                 il.Ldc_I4(0); // stack: [0]
-                var i = il.DeclareLocal(typeof(byte));
+                GroboIL.Local i = il.DeclareLocal(typeof(byte));
                 il.Stloc(i); // i = 0; stack: []
-                var loop1Start = il.DefineLabel("loop1_start");
-                var loop1End = il.DefineLabel("loop1_end");
+                GroboIL.Label loop1Start = il.DefineLabel("loop1_start");
+                GroboIL.Label loop1End = il.DefineLabel("loop1_end");
                 il.MarkLabel(loop1Start);
                 {
                     il.Ldloc(i); // stack: [i]
                     il.Ldarg(0); // stack: [i, length]
-                    il.Bge(loop1End, unsigned : true); // if (i >= length) goto end; stack: []
+                    il.Bge(loop1End, unsigned: true); // if (i >= length) goto end; stack: []
                     il.Ldloc(pointer); //stack: [pointer]
                     il.Ldloc(i); // stack: [pointer, i]
                     il.Add(); // stack: [pointer + i]
@@ -141,16 +142,16 @@ namespace GrEmit.Tests
 
                 il.Ldc_I4(0); // stack: [0]
                 il.Dup(); // stack: [0, 0]
-                var sum = il.DeclareLocal(typeof(int));
+                GroboIL.Local sum = il.DeclareLocal(typeof(int));
                 il.Stloc(sum); // sum = 0; stack: [0]
                 il.Stloc(i); // i = 0; stack: []
-                var loop2Start = il.DefineLabel("loop2_start");
-                var loop2End = il.DefineLabel("loop2_end");
+                GroboIL.Label loop2Start = il.DefineLabel("loop2_start");
+                GroboIL.Label loop2End = il.DefineLabel("loop2_end");
                 il.MarkLabel(loop2Start);
                 {
                     il.Ldloc(i); // stack: [i]
                     il.Ldarg(0); // stack: [i, length]
-                    il.Bge(loop2End, unsigned : true); // if i >= length goto end; stack:[]
+                    il.Bge(loop2End, unsigned: true); // if i >= length goto end; stack:[]
                     il.Ldloc(pointer); // stack: [pointer]
                     il.Ldloc(i); // stack: [pointer, i]
                     il.Add(); // stack: [pointer + i]
@@ -170,22 +171,22 @@ namespace GrEmit.Tests
                 il.Ldloc(sum); // stack: [sum]
                 il.Ret();
             }
-            var func = (Func<byte, int>)method.CreateDelegate(typeof(Func<byte, int>));
+            Func<byte, int> func = (Func<byte, int>)method.CreateDelegate(typeof(Func<byte, int>));
             Assert.That(func(6), Is.EqualTo(15));
         }
 
         [Test]
         public void TestDifferentStructs()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(int)}, typeof(Test));
-            var il = new GroboIL(method);
-            var loc1 = il.DeclareLocal(typeof(int?));
-            var loc2 = il.DeclareLocal(typeof(Qxx?));
-            var label1 = il.DefineLabel("zzz");
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(int) }, typeof(Test));
+            GroboIL il = new GroboIL(method);
+            GroboIL.Local loc1 = il.DeclareLocal(typeof(int?));
+            GroboIL.Local loc2 = il.DeclareLocal(typeof(Qxx?));
+            GroboIL.Label label1 = il.DefineLabel("zzz");
             il.Ldarg(0);
             il.Brfalse(label1);
             il.Ldloc(loc1);
-            var label2 = il.DefineLabel("qxx");
+            GroboIL.Label label2 = il.DefineLabel("qxx");
             il.Br(label2);
             il.MarkLabel(label1);
             il.Ldloc(loc2);
@@ -195,8 +196,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestRet()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), Type.EmptyTypes, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ret();
                 Console.Write(il.GetILCode());
@@ -206,8 +207,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestAPlusB()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(int), typeof(int)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(int), typeof(int) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Ldarg(1);
@@ -220,14 +221,14 @@ namespace GrEmit.Tests
         [Test]
         public void TestZ()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(bool), typeof(float), typeof(double)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(bool), typeof(float), typeof(double) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
-                var label1 = il.DefineLabel("label");
+                GroboIL.Label label1 = il.DefineLabel("label");
                 il.Brfalse(label1);
                 il.Ldarg(1);
-                var label2 = il.DefineLabel("label");
+                GroboIL.Label label2 = il.DefineLabel("label");
                 il.Br(label2);
                 il.MarkLabel(label1);
                 il.Ldarg(2);
@@ -244,14 +245,14 @@ namespace GrEmit.Tests
         [Test]
         public void TestZ2()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(A), new[] {typeof(bool), typeof(B), typeof(C)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(A), new[] { typeof(bool), typeof(B), typeof(C) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
-                var label1 = il.DefineLabel("label");
+                GroboIL.Label label1 = il.DefineLabel("label");
                 il.Brfalse(label1);
                 il.Ldarg(1);
-                var label2 = il.DefineLabel("label");
+                GroboIL.Label label2 = il.DefineLabel("label");
                 il.Br(label2);
                 il.MarkLabel(label1);
                 il.Ldarg(2);
@@ -264,8 +265,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestHelloWorld()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), Type.EmptyTypes, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), Type.EmptyTypes, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldstr("Hello World");
                 il.Ret();
@@ -276,12 +277,12 @@ namespace GrEmit.Tests
         [Test]
         public void TestMax()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(int), typeof(int)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(int), typeof(int) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Ldarg(1);
-                var returnSecondLabel = il.DefineLabel("returnSecond");
+                GroboIL.Label returnSecondLabel = il.DefineLabel("returnSecond");
                 il.Ble(returnSecondLabel, false);
                 il.Ldarg(0);
                 il.Ret();
@@ -295,8 +296,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestPrefixes()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(IntPtr), typeof(int)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(IntPtr), typeof(int) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Ldarg(1);
@@ -310,12 +311,12 @@ namespace GrEmit.Tests
         [Test]
         public void TestFarsh()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] {typeof(int)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), new[] { typeof(int) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
-                var temp = il.DeclareLocal(typeof(int));
+                GroboIL.Local temp = il.DeclareLocal(typeof(int));
                 il.Ldarg(0); // stack: [x]
-                var label0 = il.DefineLabel("L");
+                GroboIL.Label label0 = il.DefineLabel("L");
                 il.Br(label0); // goto L_0; stack: [x]
 
                 il.Ldstr("zzz");
@@ -323,10 +324,10 @@ namespace GrEmit.Tests
                 il.Mul();
                 il.Initobj(typeof(int));
 
-                var label1 = il.DefineLabel("L");
+                GroboIL.Label label1 = il.DefineLabel("L");
                 il.MarkLabel(label1); // stack: [x, 2]
                 il.Stloc(temp); // temp = 2; stack: [x]
-                var label2 = il.DefineLabel("L");
+                GroboIL.Label label2 = il.DefineLabel("L");
                 il.MarkLabel(label2); // stack: [cur]
                 il.Ldarg(0); // stack: [cur, x]
                 il.Mul(); // stack: [cur * x = cur]
@@ -337,7 +338,7 @@ namespace GrEmit.Tests
                 il.Ldloc(temp); // stack: [cur, temp]
                 il.Ldc_I4(0); // stack: [cur, temp, 0]
                 il.Bgt(label2, false); // if(temp > 0) goto L_2; stack: [cur]
-                var label3 = il.DefineLabel("L");
+                GroboIL.Label label3 = il.DefineLabel("L");
                 il.Br(label3); // goto L_3; stack: [cur]
                 il.MarkLabel(label0); // stack: [x]
                 il.Ldc_I4(2); // stack: [x, 2]
@@ -351,17 +352,17 @@ namespace GrEmit.Tests
         [Test]
         public void TestConstructorCall()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(Zzz)}, typeof(Test));
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(Zzz) }, typeof(Test));
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Ldc_I4(8);
-                il.Call(typeof(Zzz).GetConstructor(new[] {typeof(int)}));
+                il.Call(typeof(Zzz).GetConstructor(new[] { typeof(int) }));
                 il.Ret();
                 Console.Write(il.GetILCode());
             }
-            var action = (Action<Zzz>)method.CreateDelegate(typeof(Action<Zzz>));
-            var zzz = new Zzz(3);
+            Action<Zzz> action = (Action<Zzz>)method.CreateDelegate(typeof(Action<Zzz>));
+            Zzz zzz = new Zzz(3);
             action(zzz);
             Assert.AreEqual(8, zzz.X);
         }
@@ -378,14 +379,14 @@ namespace GrEmit.Tests
         public void TestDifferentPaths()
         {
             Console.WriteLine(Formatter.Format(typeof(Dictionary<string, int>).GetProperty("Values", BindingFlags.Public | BindingFlags.Instance).GetGetMethod()));
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(bool), typeof(C1), typeof(C2)}, typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(bool), typeof(C1), typeof(C2) }, typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
-                var label1 = il.DefineLabel("L1");
+                GroboIL.Label label1 = il.DefineLabel("L1");
                 il.Brfalse(label1);
                 il.Ldarg(1);
-                var label2 = il.DefineLabel("L2");
+                GroboIL.Label label2 = il.DefineLabel("L2");
                 il.Br(label2);
                 il.MarkLabel(label1);
                 il.Ldarg(2);
@@ -396,7 +397,7 @@ namespace GrEmit.Tests
                 il.Ret();
                 Console.Write(il.GetILCode());
             }
-            var action = method.CreateDelegate(typeof(Action<bool, C1, C2>));
+            Delegate action = method.CreateDelegate(typeof(Action<bool, C1, C2>));
         }
 
         public static void F1<T>(I1<T> i1)
@@ -410,21 +411,21 @@ namespace GrEmit.Tests
         [Test]
         public void TestDifferentPathsGeneric()
         {
-            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
-            var module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
-            var type = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
-            var method = type.DefineMethod("Qzz", MethodAttributes.Public | MethodAttributes.Static);
-            var genericParameters = method.DefineGenericParameters("TZzz");
-            var parameter = genericParameters[0];
+            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
+            ModuleBuilder module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
+            TypeBuilder type = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
+            MethodBuilder method = type.DefineMethod("Qzz", MethodAttributes.Public | MethodAttributes.Static);
+            GenericTypeParameterBuilder[] genericParameters = method.DefineGenericParameters("TZzz");
+            GenericTypeParameterBuilder parameter = genericParameters[0];
             method.SetParameters(typeof(bool), typeof(C1<>).MakeGenericType(parameter), typeof(C2<>).MakeGenericType(parameter));
             method.SetReturnType(typeof(void));
-            using (var il = new GroboIL(method))
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
-                var label1 = il.DefineLabel("L1");
+                GroboIL.Label label1 = il.DefineLabel("L1");
                 il.Brfalse(label1);
                 il.Ldarg(1);
-                var label2 = il.DefineLabel("L2");
+                GroboIL.Label label2 = il.DefineLabel("L2");
                 il.Br(label2);
                 il.MarkLabel(label1);
                 il.Ldarg(2);
@@ -440,12 +441,12 @@ namespace GrEmit.Tests
         [Test]
         public void TestBrfalse()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(C2)}, typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(C2) }, typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Dup();
-                var label = il.DefineLabel("L");
+                GroboIL.Label label = il.DefineLabel("L");
                 il.Brfalse(label);
                 il.Call(HackHelpers.GetMethodDefinition<I1>(x => x.GetI2()));
                 il.MarkLabel(label);
@@ -458,14 +459,14 @@ namespace GrEmit.Tests
         [Test]
         public void TestBrtrue()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] {typeof(C2)}, typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(void), new[] { typeof(C2) }, typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Dup();
-                var label = il.DefineLabel("L");
+                GroboIL.Label label = il.DefineLabel("L");
                 il.Brtrue(label);
-                var label2 = il.DefineLabel("L");
+                GroboIL.Label label2 = il.DefineLabel("L");
                 il.Br(label2);
                 il.MarkLabel(label);
                 il.Call(HackHelpers.GetMethodDefinition<I1>(x => x.GetI2()));
@@ -479,8 +480,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestConstrained()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), new[] {typeof(int)}, typeof(string), true);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), new[] { typeof(int) }, typeof(string), true);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarga(0);
                 il.Call(typeof(object).GetMethod("ToString"), typeof(int));
@@ -496,32 +497,32 @@ namespace GrEmit.Tests
         [Test]
         public void TestLdDec()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(decimal), Type.EmptyTypes);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(decimal), Type.EmptyTypes);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.LdDec(-12.3m);
                 il.LdDec(34.5m);
-                il.Call(typeof(decimal).GetMethod("Add", new[] {typeof(decimal), typeof(decimal)}));
+                il.Call(typeof(decimal).GetMethod("Add", new[] { typeof(decimal), typeof(decimal) }));
                 il.Ret();
                 Console.WriteLine(il.GetILCode());
             }
 
-            var compiledMethod = (Func<decimal>)method.CreateDelegate(typeof(Func<decimal>));
+            Func<decimal> compiledMethod = (Func<decimal>)method.CreateDelegate(typeof(Func<decimal>));
             Assert.That(compiledMethod(), Is.EqualTo(22.2m));
         }
 
         [Test]
         public void TestByRefGeneric()
         {
-            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
-            var module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
-            var type = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
-            var method = type.DefineMethod("Qzz", MethodAttributes.Public | MethodAttributes.Static);
-            var genericParameters = method.DefineGenericParameters("TZzz");
-            var parameter = genericParameters[0];
+            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
+            ModuleBuilder module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
+            TypeBuilder type = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
+            MethodBuilder method = type.DefineMethod("Qzz", MethodAttributes.Public | MethodAttributes.Static);
+            GenericTypeParameterBuilder[] genericParameters = method.DefineGenericParameters("TZzz");
+            GenericTypeParameterBuilder parameter = genericParameters[0];
             method.SetParameters(parameter);
             method.SetReturnType(typeof(void));
-            using (var il = new GroboIL(method))
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarga(0);
                 il.Call(HackHelpers.GetMethodDefinition<int>(x => F(ref x)).GetGenericMethodDefinition().MakeGenericMethod(parameter));
@@ -533,29 +534,29 @@ namespace GrEmit.Tests
         [Test]
         public void TestCalliWithNativeCallingConvention()
         {
-            var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
-            var module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
-            var typeBuilder = module.DefineType("TestType", TypeAttributes.Class | TypeAttributes.Public);
+            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.Run);
+            ModuleBuilder module = assembly.DefineDynamicModule(Guid.NewGuid().ToString());
+            TypeBuilder typeBuilder = module.DefineType("TestType", TypeAttributes.Class | TypeAttributes.Public);
             const string methodName = "TestMethod";
-            var methodBuilder = typeBuilder.DefineMethod(methodName, MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] {typeof(IntPtr)});
+            MethodBuilder methodBuilder = typeBuilder.DefineMethod(methodName, MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] { typeof(IntPtr) });
 #if NETCOREAPP2_0
             Assert.Throws<PlatformNotSupportedException>(() => BuildIlWithNativeCallingConvention(methodBuilder));
 #else
             BuildIlWithNativeCallingConvention(methodBuilder);
-            var type = typeBuilder.CreateType();
-            var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            var invocationResult = method.Invoke(null, new object[] {Marshal.GetFunctionPointerForDelegate(new FooDelegate(Foo))});
+            Type type = typeBuilder.CreateType();
+            MethodInfo method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
+            object invocationResult = method.Invoke(null, new object[] { Marshal.GetFunctionPointerForDelegate(new FooDelegate(Foo)) });
             Assert.That(invocationResult, Is.EqualTo(15));
 #endif
         }
 
         private static void BuildIlWithNativeCallingConvention(MethodBuilder methodBuilder)
         {
-            using (var il = new GroboIL(methodBuilder))
+            using (GroboIL il = new GroboIL(methodBuilder))
             {
                 il.Ldc_I4(10);
                 il.Ldarg(0);
-                il.Calli(CallingConvention.StdCall, typeof(int), new[] {typeof(int)});
+                il.Calli(CallingConvention.StdCall, typeof(int), new[] { typeof(int) });
                 il.Ret();
             }
         }
@@ -571,28 +572,28 @@ namespace GrEmit.Tests
         [Test, Ignore("Is used for debugging")]
         public void TestEnumerable()
         {
-            var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.RunAndSave);
-            var module = assembly.DefineDynamicModule(Guid.NewGuid().ToString(), "test.cil", true);
-            var symWriter = module.GetSymWriter();
-            var symbolDocumentWriter = symWriter.DefineDocument("test.cil", Guid.Empty, Guid.Empty, Guid.Empty);
-            var typeBuilder = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
-            var method = typeBuilder.DefineMethod("Qzz", MethodAttributes.Public);
-            var genericParameters = method.DefineGenericParameters("TZzz");
-            var parameter = genericParameters[0];
+            AssemblyBuilder assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.RunAndSave);
+            ModuleBuilder module = assembly.DefineDynamicModule(Guid.NewGuid().ToString(), "test.cil", true);
+            System.Diagnostics.SymbolStore.ISymbolWriter symWriter = module.GetSymWriter();
+            System.Diagnostics.SymbolStore.ISymbolDocumentWriter symbolDocumentWriter = symWriter.DefineDocument("test.cil", Guid.Empty, Guid.Empty, Guid.Empty);
+            TypeBuilder typeBuilder = module.DefineType("Zzz", TypeAttributes.Class | TypeAttributes.Public);
+            MethodBuilder method = typeBuilder.DefineMethod("Qzz", MethodAttributes.Public);
+            GenericTypeParameterBuilder[] genericParameters = method.DefineGenericParameters("TZzz");
+            GenericTypeParameterBuilder parameter = genericParameters[0];
             method.SetParameters(typeof(List<>).MakeGenericType(parameter), typeof(Func<,>).MakeGenericType(parameter, typeof(int)));
             method.DefineParameter(2, ParameterAttributes.In, "list");
             method.SetReturnType(typeof(int));
-            using (var il = new GroboIL(method, symbolDocumentWriter))
+            using (GroboIL il = new GroboIL(method, symbolDocumentWriter))
             {
                 il.Ldarg(1);
                 il.Dup();
-                var notNullLabel = il.DefineLabel("notNull");
+                GroboIL.Label notNullLabel = il.DefineLabel("notNull");
                 il.Brtrue(notNullLabel);
                 il.Pop();
                 il.Ldc_I4(0);
                 il.Newarr(parameter);
                 il.MarkLabel(notNullLabel);
-                var temp = il.DeclareLocal(typeof(IEnumerable<>).MakeGenericType(parameter), "arr");
+                GroboIL.Local temp = il.DeclareLocal(typeof(IEnumerable<>).MakeGenericType(parameter), "arr");
                 il.Stloc(temp);
                 il.Ldloc(temp);
                 il.Ldarg(2);
@@ -600,24 +601,28 @@ namespace GrEmit.Tests
                 il.Ret();
                 Console.WriteLine(il.GetILCode());
             }
-            var type = typeBuilder.CreateType();
-            var instance = Activator.CreateInstance(type);
-            type.GetMethod("Qzz", BindingFlags.Instance | BindingFlags.Public).MakeGenericMethod(typeof(int)).Invoke(instance, new object[] {null, null});
+            Type type = typeBuilder.CreateType();
+            object instance = Activator.CreateInstance(type);
+            type.GetMethod("Qzz", BindingFlags.Instance | BindingFlags.Public).MakeGenericMethod(typeof(int)).Invoke(instance, new object[] { null, null });
         }
 #endif
 
         public static string[] Create(string[] values)
         {
             CheckDifferent(values);
-            var hashSet = new HashSet<int>();
-            for (var n = Math.Max(values.Length, 1);; ++n)
+            HashSet<int> hashSet = new HashSet<int>();
+            for (int n = Math.Max(values.Length, 1); ; ++n)
             {
                 hashSet.Clear();
-                var ok = true;
-                foreach (var str in values)
+                bool ok = true;
+                foreach (string str in values)
                 {
-                    var idx = str.GetHashCode() % n;
-                    if (idx < 0) idx += n;
+                    int idx = str.GetHashCode() % n;
+                    if (idx < 0)
+                    {
+                        idx += n;
+                    }
+
                     if (hashSet.Contains(idx))
                     {
                         ok = false;
@@ -627,11 +632,15 @@ namespace GrEmit.Tests
                 }
                 if (ok)
                 {
-                    var result = new string[n];
-                    foreach (var str in values)
+                    string[] result = new string[n];
+                    foreach (string str in values)
                     {
-                        var idx = str.GetHashCode() % n;
-                        if (idx < 0) idx += n;
+                        int idx = str.GetHashCode() % n;
+                        if (idx < 0)
+                        {
+                            idx += n;
+                        }
+
                         result[idx] = str;
                     }
                     return result;
@@ -643,60 +652,74 @@ namespace GrEmit.Tests
         [Test, Ignore("Is used for debugging")]
         public void TestPerformance_Ifs_vs_Switch()
         {
-            var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.RunAndSave);
-            var module = assembly.DefineDynamicModule("Zzz", true);
+            AssemblyBuilder assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(Guid.NewGuid().ToString()), AssemblyBuilderAccess.RunAndSave);
+            ModuleBuilder module = assembly.DefineDynamicModule("Zzz", true);
 
-            for (var numberOfCases = 1; numberOfCases <= 20; ++numberOfCases)
+            for (int numberOfCases = 1; numberOfCases <= 20; ++numberOfCases)
             {
                 Console.WriteLine("#" + numberOfCases);
-                var keys = new string[numberOfCases];
-                for (var i = 0; i < numberOfCases; ++i)
+                string[] keys = new string[numberOfCases];
+                for (int i = 0; i < numberOfCases; ++i)
+                {
                     keys[i] = Guid.NewGuid().ToString();
+                }
 
-                var ifs = BuildIfs(module, keys);
-                var switCh = BuildSwitch(module, keys);
+                IQxx ifs = BuildIfs(module, keys);
+                IQxx switCh = BuildSwitch(module, keys);
                 const int iterations = 100_000_000;
 
                 Console.WriteLine("Worst case:");
 
-                var stopwatch = Stopwatch.StartNew();
-                for (var iter = 0; iter < iterations / numberOfCases; ++iter)
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                for (int iter = 0; iter < iterations / numberOfCases; ++iter)
                 {
-                    for (var i = 0; i < numberOfCases; ++i)
+                    for (int i = 0; i < numberOfCases; ++i)
+                    {
                         ifs.Set("zzz", iter);
+                    }
+
                     ifs.Set("zzz", iter);
                 }
-                var elapsedIfs = stopwatch.Elapsed;
+                TimeSpan elapsedIfs = stopwatch.Elapsed;
                 Console.WriteLine("Ifs: " + elapsedIfs.TotalMilliseconds * 1000 / iterations + " microseconds (" + Math.Round(1000.0 * iterations / elapsedIfs.TotalMilliseconds) + " runs per second)");
 
                 stopwatch = Stopwatch.StartNew();
-                for (var iter = 0; iter < iterations / numberOfCases; ++iter)
+                for (int iter = 0; iter < iterations / numberOfCases; ++iter)
                 {
-                    for (var i = 0; i < numberOfCases; ++i)
+                    for (int i = 0; i < numberOfCases; ++i)
+                    {
                         switCh.Set("zzz", iter);
+                    }
+
                     switCh.Set("zzz", iter);
                 }
-                var elapsedSwitch = stopwatch.Elapsed;
+                TimeSpan elapsedSwitch = stopwatch.Elapsed;
                 Console.WriteLine("Switch: " + elapsedSwitch.TotalMilliseconds * 1000 / iterations + " microseconds (" + Math.Round(1000.0 * iterations / elapsedSwitch.TotalMilliseconds) + " runs per second)");
                 Console.WriteLine(elapsedSwitch.TotalMilliseconds / elapsedIfs.TotalMilliseconds);
 
                 Console.WriteLine("Average:");
 
                 stopwatch = Stopwatch.StartNew();
-                for (var iter = 0; iter < iterations / numberOfCases; ++iter)
+                for (int iter = 0; iter < iterations / numberOfCases; ++iter)
                 {
-                    for (var i = 0; i < numberOfCases; ++i)
+                    for (int i = 0; i < numberOfCases; ++i)
+                    {
                         ifs.Set(keys[i], iter);
+                    }
+
                     ifs.Set("zzz", iter);
                 }
                 elapsedIfs = stopwatch.Elapsed;
                 Console.WriteLine("Ifs: " + elapsedIfs.TotalMilliseconds * 1000 / iterations + " microseconds (" + Math.Round(1000.0 * iterations / elapsedIfs.TotalMilliseconds) + " runs per second)");
 
                 stopwatch = Stopwatch.StartNew();
-                for (var iter = 0; iter < iterations / numberOfCases; ++iter)
+                for (int iter = 0; iter < iterations / numberOfCases; ++iter)
                 {
-                    for (var i = 0; i < numberOfCases; ++i)
+                    for (int i = 0; i < numberOfCases; ++i)
+                    {
                         switCh.Set(keys[i], iter);
+                    }
+
                     switCh.Set("zzz", iter);
                 }
                 elapsedSwitch = stopwatch.Elapsed;
@@ -711,8 +734,8 @@ namespace GrEmit.Tests
         [Test]
         public void Test_CreateStruct_ThenGetField()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), Type.EmptyTypes);
-            using (var il = new GroboIL(method))
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(int), Type.EmptyTypes);
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldc_I4(5);
                 il.Newobj(HackHelpers.GetObjectConstruction(() => new TestStruct(0)));
@@ -735,8 +758,8 @@ namespace GrEmit.Tests
         [Test]
         public void TestCallFormat()
         {
-            var method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), new[] {typeof(string), typeof(decimal), typeof(decimal)}, typeof(string), true);
-            var il = new GroboIL(method);
+            DynamicMethod method = new DynamicMethod(Guid.NewGuid().ToString(), typeof(string), new[] { typeof(string), typeof(decimal), typeof(decimal) }, typeof(string), true);
+            GroboIL il = new GroboIL(method);
             il.Ldarg(0);
             il.Ldarg(1);
             il.Ldarg(2);
@@ -767,35 +790,41 @@ namespace GrEmit.Tests
 
         private static void CheckDifferent(string[] values)
         {
-            var hashSet = new HashSet<string>();
-            foreach (var str in values)
+            HashSet<string> hashSet = new HashSet<string>();
+            foreach (string str in values)
             {
                 if (hashSet.Contains(str))
+                {
                     throw new InvalidOperationException($"Duplicate value '{str}'");
+                }
+
                 hashSet.Add(str);
             }
         }
 
         private IQxx BuildIfs(ModuleBuilder module, string[] keys)
         {
-            var numberOfCases = keys.Length;
-            var typeBuilder = module.DefineType("Ifs" + Guid.NewGuid(), TypeAttributes.Class | TypeAttributes.Public);
+            int numberOfCases = keys.Length;
+            TypeBuilder typeBuilder = module.DefineType("Ifs" + Guid.NewGuid(), TypeAttributes.Class | TypeAttributes.Public);
             typeBuilder.AddInterfaceImplementation(typeof(IQxx));
-            var fields = new FieldInfo[numberOfCases];
-            for (var i = 0; i < numberOfCases; ++i)
+            FieldInfo[] fields = new FieldInfo[numberOfCases];
+            for (int i = 0; i < numberOfCases; ++i)
+            {
                 fields[i] = typeBuilder.DefineField(keys[i], typeof(int), FieldAttributes.Public);
-            var method = typeBuilder.DefineMethod("Set", MethodAttributes.Public | MethodAttributes.Virtual, typeof(void), new[] {typeof(string), typeof(int)});
+            }
+
+            MethodBuilder method = typeBuilder.DefineMethod("Set", MethodAttributes.Public | MethodAttributes.Virtual, typeof(void), new[] { typeof(string), typeof(int) });
             method.DefineParameter(1, ParameterAttributes.In, "key");
             method.DefineParameter(2, ParameterAttributes.In, "value");
-            using (var il = new GroboIL(method))
+            using (GroboIL il = new GroboIL(method))
             {
-                var doneLabel = il.DefineLabel("done");
-                for (var i = 0; i < numberOfCases; ++i)
+                GroboIL.Label doneLabel = il.DefineLabel("done");
+                for (int i = 0; i < numberOfCases; ++i)
                 {
                     il.Ldarg(1); // stack: [key]
                     il.Ldstr(keys[i]); // stack: [key, keys[i]]
                     il.Call(stringEqualityOperator); // stack: [key == keys[i]]
-                    var nextKeyLabel = il.DefineLabel("nextKey");
+                    GroboIL.Label nextKeyLabel = il.DefineLabel("nextKey");
                     il.Brfalse(nextKeyLabel); // if(key != keys[i]) goto nextKey; stack: []
                     il.Ldarg(0);
                     il.Ldarg(2);
@@ -807,23 +836,26 @@ namespace GrEmit.Tests
                 il.Ret();
             }
             typeBuilder.DefineMethodOverride(method, typeof(IQxx).GetMethod("Set"));
-            var type = typeBuilder.CreateType();
+            Type type = typeBuilder.CreateType();
             return (IQxx)Activator.CreateInstance(type);
         }
 
         private IQxx BuildSwitch(ModuleBuilder module, string[] keys)
         {
-            var numberOfCases = keys.Length;
-            var typeBuilder = module.DefineType("Switch" + Guid.NewGuid(), TypeAttributes.Class | TypeAttributes.Public);
+            int numberOfCases = keys.Length;
+            TypeBuilder typeBuilder = module.DefineType("Switch" + Guid.NewGuid(), TypeAttributes.Class | TypeAttributes.Public);
             typeBuilder.AddInterfaceImplementation(typeof(IQxx));
-            var fields = new FieldInfo[numberOfCases];
-            for (var i = 0; i < numberOfCases; ++i)
+            FieldInfo[] fields = new FieldInfo[numberOfCases];
+            for (int i = 0; i < numberOfCases; ++i)
+            {
                 fields[i] = typeBuilder.DefineField(keys[i], typeof(int), FieldAttributes.Public);
-            var tinyHashtable = Create(keys);
-            var n = tinyHashtable.Length;
-            var keysField = typeBuilder.DefineField("keys", typeof(string[]), FieldAttributes.Public);
-            var constructor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new[] {typeof(string[])});
-            using (var il = new GroboIL(constructor))
+            }
+
+            string[] tinyHashtable = Create(keys);
+            int n = tinyHashtable.Length;
+            FieldBuilder keysField = typeBuilder.DefineField("keys", typeof(string[]), FieldAttributes.Public);
+            ConstructorBuilder constructor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new[] { typeof(string[]) });
+            using (GroboIL il = new GroboIL(constructor))
             {
                 il.Ldarg(0);
                 il.Ldarg(1);
@@ -831,10 +863,10 @@ namespace GrEmit.Tests
                 il.Ret();
             }
 
-            var method = typeBuilder.DefineMethod("Set", MethodAttributes.Public | MethodAttributes.Virtual, typeof(void), new[] {typeof(string), typeof(int)});
+            MethodBuilder method = typeBuilder.DefineMethod("Set", MethodAttributes.Public | MethodAttributes.Virtual, typeof(void), new[] { typeof(string), typeof(int) });
             method.DefineParameter(1, ParameterAttributes.In, "key");
             method.DefineParameter(2, ParameterAttributes.In, "value");
-            using (var il = new GroboIL(method))
+            using (GroboIL il = new GroboIL(method))
             {
                 il.Ldarg(0);
                 il.Ldfld(keysField);
@@ -842,31 +874,42 @@ namespace GrEmit.Tests
                 il.Call(HackHelpers.GetMethodDefinition<object>(o => o.GetHashCode()));
                 il.Ldc_I4(n);
                 il.Rem(true);
-                var idx = il.DeclareLocal(typeof(int));
+                GroboIL.Local idx = il.DeclareLocal(typeof(int));
                 il.Dup();
                 il.Stloc(idx);
                 il.Ldelem(typeof(string));
                 il.Ldarg(1);
                 il.Call(stringEqualityOperator);
-                var doneLabel = il.DefineLabel("done");
+                GroboIL.Label doneLabel = il.DefineLabel("done");
                 il.Brfalse(doneLabel);
 
-                var labels = new GroboIL.Label[n];
-                for (var i = 0; i < n; ++i)
-                    labels[i] = doneLabel;
-                foreach (var key in keys)
+                GroboIL.Label[] labels = new GroboIL.Label[n];
+                for (int i = 0; i < n; ++i)
                 {
-                    var index = key.GetHashCode() % n;
-                    if (index < 0) index += n;
-                    var label = il.DefineLabel("set_" + key);
+                    labels[i] = doneLabel;
+                }
+
+                foreach (string key in keys)
+                {
+                    int index = key.GetHashCode() % n;
+                    if (index < 0)
+                    {
+                        index += n;
+                    }
+
+                    GroboIL.Label label = il.DefineLabel("set_" + key);
                     labels[index] = label;
                 }
                 il.Ldloc(idx);
                 il.Switch(labels);
-                for (var i = 0; i < keys.Length; ++i)
+                for (int i = 0; i < keys.Length; ++i)
                 {
-                    var index = keys[i].GetHashCode() % n;
-                    if (index < 0) index += n;
+                    int index = keys[i].GetHashCode() % n;
+                    if (index < 0)
+                    {
+                        index += n;
+                    }
+
                     il.MarkLabel(labels[index]);
                     il.Ldarg(0);
                     il.Ldarg(2);
@@ -877,8 +920,8 @@ namespace GrEmit.Tests
                 il.Ret();
             }
             typeBuilder.DefineMethodOverride(method, typeof(IQxx).GetMethod("Set"));
-            var type = typeBuilder.CreateType();
-            return (IQxx)Activator.CreateInstance(type, new object[] {tinyHashtable});
+            Type type = typeBuilder.CreateType();
+            return (IQxx)Activator.CreateInstance(type, new object[] { tinyHashtable });
         }
 
         private struct Qxx

@@ -6,7 +6,7 @@ namespace GrEmit.StackMutators
     {
         public override void Mutate(GroboIL il, ILInstructionParameter parameter, ref EvaluationStack stack)
         {
-            var local = ((LocalILInstructionParameter)parameter).Local;
+            GroboIL.Local local = ((LocalILInstructionParameter)parameter).Local;
             stack.Push(local.Type.MakeByRefType());
         }
     }
